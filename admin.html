@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrossTrade Admin — Compliance & Operations Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-display:'Bebas Neue', 'Arial Narrow', sans-serif;
+  --font-body:'Inter', -apple-system, 'PingFang SC', sans-serif;
+  --font-mono:'JetBrains Mono', 'Fira Code', monospace;
+  --accent-soft:#CA9FFF;
+  --neon:#FDFF6D;
+  --grad:linear-gradient(100deg,#6a48f2 0%,#a86fff 45%,#fc9fdf 100%);
+  --ok:#2fd47e; --warn:#ffb43a; --err:#ff5d5d;
+  --side-w:248px; --top-h:64px;
+}
+[data-theme="dark"]{
+  --bg:#000000; --bg-2:#0a0a0d; --surface:#0e0e12; --surface-2:#16161d; --surface-3:#1e1e28;
+  --text:#ffffff; --muted:rgba(255,255,255,.55); --faint:rgba(255,255,255,.32);
+  --border:rgba(255,255,255,.11); --border-strong:rgba(255,255,255,.22);
+  --accent:#CA9FFF; --btn-bg:#CA9FFF; --btn-text:#0a0a0a;
+  --hover:rgba(255,255,255,.06); --glass:rgba(10,10,13,.72); --input:#101016;
+  --shadow:0 24px 80px rgba(0,0,0,.6); --gridline:rgba(255,255,255,.05);
+}
+[data-theme="light"]{
+  --bg:#ffffff; --bg-2:#f3f2ff; --surface:#ffffff; --surface-2:#f6f5ff; --surface-3:#eceaff;
+  --text:#16161a; --muted:rgba(22,22,26,.58); --faint:rgba(22,22,26,.34);
+  --border:rgba(22,22,26,.12); --border-strong:rgba(22,22,26,.26);
+  --accent:#6a48f2; --btn-bg:#16161a; --btn-text:#ffffff;
+  --hover:rgba(22,22,26,.05); --glass:rgba(255,255,255,.78); --input:#f6f5ff;
+  --shadow:0 24px 80px rgba(106,72,242,.14); --gridline:rgba(22,22,26,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .5s,color .5s}
+::selection{background:var(--accent);color:#000}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+.mono{font-family:var(--font-mono);font-feature-settings:"tnum"}
+.grid-overlay{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(90deg,var(--gridline) 0 1px,transparent 1px calc(100%/12));
+  mask-image:linear-gradient(to bottom,black 0%,transparent 100vh);
+  -webkit-mask-image:linear-gradient(to bottom,black 0%,transparent 100vh)}
+.cursor{pointer-events:none;mix-blend-mode:difference;width:100vw;height:100vh;position:fixed;inset:0;z-index:150;opacity:0;transition:opacity .25s}
+.cursor .dot{mix-blend-mode:difference;background:#fff;border-radius:50%;width:14px;height:14px;position:absolute;transform:translate(-50%,-50%);transition:width .2s,height .2s}
+.cursor.big .dot{width:44px;height:44px}
+body:hover .cursor{opacity:1}
+@media (pointer:coarse){.cursor{display:none}}
+
+/* ============ LAYOUT ============ */
+.shell{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{
+  width:var(--side-w);flex-shrink:0;border-right:1px solid var(--border);
+  background:var(--bg-2);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
+  padding:22px 0;transition:background .5s;
+}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:0 24px 24px;border-bottom:1px solid var(--border)}
+.sb-logo svg{width:28px;height:28px}
+.sb-logo .name{font-family:var(--font-display);font-size:23px;letter-spacing:.05em;line-height:1}
+.sb-logo .tag{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-top:3px}
+.sb-nav{padding:18px 14px;display:flex;flex-direction:column;gap:3px;flex:1}
+.sb-link{
+  display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;
+  font-size:13.5px;font-weight:500;color:var(--muted);transition:all .22s;text-align:left;width:100%;
+}
+.sb-link svg{width:17px;height:17px;stroke:currentColor;flex-shrink:0}
+.sb-link:hover{color:var(--text);background:var(--hover)}
+.sb-link.active{color:var(--text);background:var(--surface-2);font-weight:600;box-shadow:inset 2.5px 0 0 var(--accent)}
+.sb-link .badge{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;font-weight:700;
+  background:var(--err);color:#fff;border-radius:99px;padding:2px 8px;min-width:24px;text-align:center}
+.sb-foot{padding:16px 18px 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px}
+.sb-user{display:flex;align-items:center;gap:11px}
+.sb-user .av{width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff}
+.sb-user .n{font-size:13px;font-weight:600}
+.sb-user .r{font-size:11px;color:var(--muted)}
+.theme-toggle{width:52px;height:28px;border-radius:99px;border:1px solid var(--border-strong);position:relative;background:var(--surface-2);transition:background .4s}
+.theme-toggle .thumb{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--accent);transition:transform .45s cubic-bezier(.65,0,.35,1);display:flex;align-items:center;justify-content:center}
+.theme-toggle .thumb svg{width:12px;height:12px;stroke:#0a0a0a}
+[data-theme="light"] .theme-toggle .thumb{transform:translateX(24px)}
+.main{flex:1;min-width:0}
+.topbar{
+  height:var(--top-h);border-bottom:1px solid var(--border);display:flex;align-items:center;
+  justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:50;
+  background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.topbar .tb-title{font-family:var(--font-display);font-size:30px;letter-spacing:.03em;line-height:1;text-transform:uppercase}
+.topbar .tb-right{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--muted)}
+.net-pill{display:flex;align-items:center;gap:7px;border:1px solid var(--border-strong);border-radius:99px;padding:7px 14px;font-family:var(--font-mono);font-size:11px}
+.net-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.view{display:none;padding:34px}
+.view.active{display:block}
+@media(max-width:900px){.sidebar{display:none}.view{padding:20px}}
+
+/* ============ COMMON ============ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:26px}
+@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);padding:24px 26px}
+.stat .s-lbl{font-size:11.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.stat .s-val{font-family:var(--font-display);font-size:44px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .s-sub{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:9px}
+.stat .s-sub .up{color:var(--ok)}.stat .s-sub .dn{color:var(--err)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:26px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:17px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+.panel-head h3{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.panel-head .hint{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:left;padding:12px 18px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .18s}
+tbody tr:hover{background:var(--hover)}
+tr.clickable{cursor:pointer}
+.tbl-wrap{overflow-x:auto}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;padding:5px 11px;border-radius:99px;white-space:nowrap}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:rgba(47,212,126,.13);color:var(--ok)}
+.pill.warn{background:rgba(255,180,58,.13);color:var(--warn)}
+.pill.err{background:rgba(255,93,93,.12);color:var(--err)}
+.pill.info{background:rgba(202,159,255,.15);color:var(--accent)}
+.pill.mut{background:var(--surface-2);color:var(--muted)}
+.score-cell{display:flex;align-items:center;gap:10px}
+.score-bar{width:52px;height:5px;border-radius:99px;background:var(--surface-3);overflow:hidden}
+.score-bar i{display:block;height:100%;border-radius:99px}
+.score-num{font-family:var(--font-mono);font-size:12.5px;font-weight:700}
+.btn-sm{padding:7px 14px;border-radius:9px;font-size:12px;font-weight:600;transition:all .2s;border:1px solid transparent;white-space:nowrap}
+.btn-ok{background:rgba(47,212,126,.14);color:var(--ok)}
+.btn-ok:hover{background:var(--ok);color:#041b0f}
+.btn-no{background:rgba(255,93,93,.12);color:var(--err)}
+.btn-no:hover{background:var(--err);color:#fff}
+.btn-line{border-color:var(--border-strong);color:var(--muted)}
+.btn-line:hover{color:var(--text);border-color:var(--accent)}
+.btn-save{background:var(--grad);color:#fff;font-weight:700;padding:13px 30px;border-radius:12px;font-size:14px;transition:transform .25s,filter .25s}
+.btn-save:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.f-chip{padding:8px 15px;border-radius:99px;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--border);transition:all .2s}
+.f-chip:hover{color:var(--text)}
+.f-chip.active{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+.search-inp{background:var(--input);border:1px solid var(--border);border-radius:11px;padding:9px 15px;font-size:13px;outline:none;width:220px;transition:border-color .25s}
+.search-inp:focus{border-color:var(--accent)}
+.field-lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.inp{width:100%;background:var(--input);border:1px solid var(--border);border-radius:11px;padding:12px 14px;font-size:13.5px;outline:none;transition:border-color .25s;font-family:var(--font-mono)}
+.inp:focus{border-color:var(--accent)}
+.inp-row{display:grid;gap:10px;margin-bottom:10px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:12px;margin:30px 0 16px}
+.eyebrow::before{content:'';width:26px;height:1px;background:var(--accent)}
+
+/* tx detail drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,94vw);background:var(--surface);border-left:1px solid var(--border-strong);z-index:110;transform:translateX(105%);transition:transform .45s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.drawer.open{transform:none}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
+.drawer-head .ref{font-family:var(--font-mono);font-weight:700;font-size:15px}
+.drawer-body{flex:1;overflow-y:auto;padding:22px 24px}
+.drawer-foot{padding:18px 24px;border-top:1px solid var(--border);display:flex;gap:10px}
+.drawer-foot .btn-sm{flex:1;padding:13px;font-size:13.5px;border-radius:12px}
+.d-section{margin-bottom:22px}
+.d-section h4{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.d-row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-size:13px}
+.d-row span:first-child{color:var(--muted);flex-shrink:0}
+.d-row span:last-child{text-align:right;font-weight:500;word-break:break-all}
+.d-row .mono{font-size:12px}
+.flag{display:inline-block;font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:rgba(255,180,58,.12);color:var(--warn);margin:0 6px 6px 0}
+.flag.sev{background:rgba(255,93,93,.12);color:var(--err)}
+.rec-box{border:1px solid var(--border-strong);border-radius:13px;padding:14px 16px;font-size:13px;line-height:1.6;background:var(--surface-2)}
+.rec-box b{display:block;margin-bottom:4px}
+/* escrow stepper */
+.escrow{position:relative;padding-left:30px}
+.escrow::before{content:'';position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--border-strong)}
+.e-step{position:relative;padding:0 0 20px}
+.e-step:last-child{padding-bottom:0}
+.e-step .e-dot{position:absolute;left:-30px;top:2px;width:18px;height:18px;border-radius:50%;border:2px solid var(--border-strong);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:transparent}
+.e-step.done .e-dot{border-color:var(--ok);background:var(--ok);color:#041b0f}
+.e-step.now .e-dot{border-color:var(--accent);box-shadow:0 0 0 4px rgba(202,159,255,.18)}
+.e-step.now .e-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.6s infinite}
+.e-step.rej .e-dot{border-color:var(--err);background:var(--err)}
+.e-step .e-title{font-size:13px;font-weight:600}
+.e-step .e-sub{font-size:11.5px;color:var(--muted);margin-top:3px;font-family:var(--font-mono);word-break:break-all}
+.e-step.muted{opacity:.42}
+/* toasts */
+#toasts{position:fixed;bottom:26px;right:26px;z-index:160;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--surface);border:1px solid var(--border-strong);border-left:3px solid var(--accent);border-radius:14px;padding:15px 20px;font-size:13.5px;font-weight:500;min-width:280px;box-shadow:var(--shadow);animation:toastin .4s cubic-bezier(.22,1,.36,1);display:flex;align-items:center;gap:10px}
+.toast.ok{border-left-color:var(--ok)}.toast.err{border-left-color:var(--err)}
+@keyframes toastin{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+.toast.out{transition:all .4s;transform:translateX(120%);opacity:0}
+.empty{padding:36px;text-align:center;color:var(--faint);font-size:13px}
+</style>
+</head>
+<body>
+<div class="cursor"><div class="dot"></div></div>
+<div class="grid-overlay"></div>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <svg viewBox="0 0 32 32" fill="none"><path d="M4 22 L16 4 L28 22" stroke="url(#lg2)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 28 L22 10" stroke="#CA9FFF" stroke-width="3.4" stroke-linecap="round" opacity=".85"/><defs><linearGradient id="lg2" x1="4" y1="4" x2="28" y2="28"><stop stop-color="#6a48f2"/><stop offset="1" stop-color="#fc9fdf"/></linearGradient></defs></svg>
+      <span><div class="name">CROSSTRADE</div><div class="tag">Admin Console</div></span>
+    </div>
+    <nav class="sb-nav">
+      <button class="sb-link active" data-view="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Overview</button>
+      <button class="sb-link" data-view="kyc">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><path d="M16 4.5l1.6 1.6L21 3"/></svg>
+        KYC / KYB <span class="badge" id="kycBadge">0</span></button>
+      <button class="sb-link" data-view="txns">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+        Transactions <span class="badge" id="txBadge">0</span></button>
+      <button class="sb-link" data-view="accounts">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15.5h4"/></svg>
+        Accounts &amp; Wallets</button>
+      <button class="sb-link" data-view="fees">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 5L5 19M6.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm11 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+        Fees &amp; Rates</button>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-user">
+        <span class="av">OP</span>
+        <span><div class="n">Operations Desk</div><div class="r">Compliance admin</div></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <span class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></svg></span>
+        </button>
+        <a href="index.html" style="font-size:12px;font-weight:600;color:var(--accent)">← Exchange</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="tb-title" id="tbTitle">Overview</div>
+      <div class="tb-right">
+        <span class="net-pill"><span class="dot"></span>Stellar Mainnet · escrow live</span>
+      </div>
+    </div>
+
+    <div class="view active" id="view-overview"></div>
+    <div class="view" id="view-kyc"></div>
+    <div class="view" id="view-txns"></div>
+    <div class="view" id="view-accounts"></div>
+    <div class="view" id="view-fees"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- TX DETAIL DRAWER -->
+<div class="drawer" id="txDrawer">
+  <div class="drawer-head">
+    <span class="ref" id="drRef">—</span>
+    <button class="btn-sm btn-line" id="drClose">Close ✕</button>
+  </div>
+  <div class="drawer-body" id="drBody"></div>
+  <div class="drawer-foot" id="drFoot"></div>
+</div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ---------- THEME / CURSOR ---------- */
+const root = document.documentElement;
+const savedTheme = localStorage.getItem('ct-theme');
+if (savedTheme) root.dataset.theme = savedTheme;
+$('#themeToggle').addEventListener('click', () => {
+  root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ct-theme', root.dataset.theme);
+});
+const cursor = $('.cursor'), dot = $('.cursor .dot');
+let cx = innerWidth/2, cy = innerHeight/2, tx = cx, ty = cy;
+addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; });
+(function loopC(){ cx += (tx-cx)*.22; cy += (ty-cy)*.22; dot.style.left = cx+'px'; dot.style.top = cy+'px'; requestAnimationFrame(loopC); })();
+document.addEventListener('mouseover', e => cursor.classList.toggle('big', !!e.target.closest('a,button,input,tr.clickable')));
+
+/* ---------- HELPERS ---------- */
+function toast(msg, cls=''){
+  const t = document.createElement('div');
+  t.className = 'toast ' + cls; t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 450); }, 3200);
+}
+const fmtN = (n, d=2) => n.toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+function ago(t){
+  const s = (Date.now()-t)/1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60)+'m ago';
+  if (s < 86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+/* deterministic pseudo-random from a string */
+function prng(str, min, max){
+  let h = 2166136261;
+  for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return min + (Math.abs(h) % 1000) / 1000 * (max - min);
+}
+function hashRef(){
+  return 'CT-' + Array.from({length:6}, () => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*34)]).join('');
+}
+
+/* ---------- DEFAULT DATA (mirrors the exchange, overridable) ---------- */
+const FIAT_LIST = ['USD','EUR','GBP','NGN','ZAR','KES','GHS','MWK','MZN','BRL','PHP'];
+const CRYPTO_LIST = ['XLM','USDC','USDT','AQUA','yXLM','BTC','ETH','XRP','BNB'];
+const DEFAULT_ACCOUNTS = {
+  USD:{bank:'Mercury Bank · CrossTrade Settlement LLC', name:'CrossTrade Escrow — USD', acct:'US12 3456 7890 1234 5678 90', rail:'Wire / ACH'},
+  EUR:{bank:'CrossTrade Europe BV', name:'CrossTrade Escrow — EUR', acct:'DE89 3704 0044 0532 0130 00', rail:'SEPA'},
+  GBP:{bank:'CrossTrade UK Ltd', name:'CrossTrade Escrow — GBP', acct:'GB29 NWBK 6016 1331 9268 19', rail:'Faster Payments'},
+  NGN:{bank:'CrossTrade NG · Kuda Microfinance', name:'CrossTrade Escrow — NGN', acct:'2001 3344 55', rail:'NIP transfer'},
+  ZAR:{bank:'CrossTrade ZA · Standard Bank', name:'CrossTrade Escrow — ZAR', acct:'ZA45 0800 1234 5678 9012 34', rail:'EFT / PayShap'},
+  KES:{bank:'CrossTrade KE · Equity Bank', name:'CrossTrade Escrow — KES', acct:'0470 1234 5678', rail:'PesaLink / M-Pesa'},
+  GHS:{bank:'CrossTrade GH · Stanbic Ghana', name:'CrossTrade Escrow — GHS', acct:'9040 0055 6677', rail:'GhIPSS instant'},
+  MWK:{bank:'CrossTrade MW · National Bank of Malawi', name:'CrossTrade Escrow — MWK', acct:'1002 3344 5566', rail:'EFT'},
+  MZN:{bank:'CrossTrade MZ · BCI Moçambique', name:'CrossTrade Escrow — MZN', acct:'1188 4455 6677 001', rail:'SIMO / EFT'},
+  BRL:{bank:'CrossTrade BR · Banco Inter', name:'CrossTrade Escrow — BRL', acct:'BR97 0036 0305 0001 0000 9795 493P 1', rail:'Pix'},
+  PHP:{bank:'CrossTrade PH · BDO Unibank', name:'CrossTrade Escrow — PHP', acct:'0011 2233 4455', rail:'InstaPay'},
+};
+const DEFAULT_WALLETS = {
+  XLM:'GCTRES4XLM7QPW2KD9MN3VZ8HA5B1F6E0CROWTRADEESCROWXLM',
+  USDC:'GCTRESUSDC8K3N5Q7W2X4Z6B9D1F0HJMESUROWSDCCTRADE4',
+  USDT:'GCTRESUSDT4M8P2R6V1Y3C5A7E9G0KLNESUSTDTCTRADE9X',
+  AQUA:'GCTRESAQUA2N6Q0W8R4T7Y1U3I5P9SADFAQUACTRADEM3Z',
+  yXLM:'GCTRESYXLM5B9D3F7H1J4L6N8P0R2T4VYXLMCTRADEW8QK',
+  BTC:'GCTRESBTC9X7V5T3R1P6N4L2J8H0F6DBTCCWRAPTRADE5M',
+  ETH:'GCTRESETH3Z1X9C7V5B3N1M7Q5W9E2RETWRAPCTRADEU6Y',
+  XRP:'GCTRESXRP6K8M2P4S9V1Y3C5A7E0G6IXRPWRAPTRADEB4N',
+  BNB:'GCTRESBNB8Q0W4E6R2T8Y4U6I0P3S5DBNBWRAPTRADEH7J',
+};
+const DEFAULT_RATES = {XLM:0.1187,USDC:1,USDT:1,AQUA:0.0011,yXLM:0.1325,BTC:67230,ETH:3512,XRP:0.62,BNB:615,
+  USD:1,EUR:1.08,GBP:1.27,NGN:0.00066,ZAR:0.055,KES:0.0077,GHS:0.066,MWK:0.00058,MZN:0.0156,BRL:0.19,PHP:0.017};
+const DEFAULT_FEES = {
+  corridor: 1.0, sell: 0.8, pool: 0.3,
+  methods: {card:1.8, bank:0.5, paypal:2.5, valr:1.0, revolut:0.9, momo:1.2},
+};
+
+/* persisted overrides */
+function loadJSON(k, fb){ try { return JSON.parse(localStorage.getItem(k)) || fb; } catch(e){ return fb; } }
+const store = {
+  accounts: loadJSON('ct-admin-accounts', {}),
+  wallets:  loadJSON('ct-admin-wallets', {}),
+  fees:     loadJSON('ct-admin-fees', null),
+  rates:    loadJSON('ct-admin-rates', null),
+  decisions:loadJSON('ct-admin-decisions', {}),
+  kycDec:   loadJSON('ct-admin-kyc', {}),
+};
+const fees = DEFAULT_FEES.methods ? JSON.parse(JSON.stringify(DEFAULT_FEES)) : null;
+if (store.fees){ Object.assign(fees, {...store.fees, methods:{...fees.methods, ...(store.fees.methods||{})}}); fees.methods = {...DEFAULT_FEES.methods, ...(store.fees.methods||{})}; }
+const rates = {...DEFAULT_RATES, ...(store.rates || {})};
+function getAccount(sym){ return {...DEFAULT_ACCOUNTS[sym], ...(store.accounts[sym]||{})}; }
+function getWallet(sym){ return store.wallets[sym] || DEFAULT_WALLETS[sym]; }
+</script>
+
+<script>
+/* ---------- TRANSACTIONS DATA ---------- */
+/* Seed queue + live queue pushed by the exchange UI (ct-admin-queue) */
+const H = 3600e3, NOW = Date.now();
+const SEED_TXNS = [
+  {ref:'CT-Q8M2PA', t:NOW-0.2*H, type:'fiat', fromSym:'ZAR', fromAmt:15000, toSym:'NGN', toAmt:1818000, sender:{name:'Thabo Mokoena', acct:'ZA45 6200 1188 3344 12'}, recipient:{name:'Adaeze Okafor', acct:'0123 4567 89', bank:'GTBank Nigeria'}},
+  {ref:'CT-W2KD7N', t:NOW-0.6*H, type:'swap', fromSym:'XLM', fromAmt:9000, toSym:'USDC', toAmt:1065.4, sender:{name:'Wallet GD4K…9PQL', acct:'GD4KX7TM29PQL0HA5B1F6E0CW8N3VZ8KD9MNQRSTUV'}, recipient:{name:'Self', acct:'GD4KX7TM29PQL0HA5B1F6E0CW8N3VZ8KD9MNQRSTUV', bank:'—'}},
+  {ref:'CT-R5T8HU', t:NOW-1.1*H, type:'buy',  fromSym:'KES', fromAmt:65000, toSym:'BTC', toAmt:0.0076, sender:{name:'Wanjiku Kamau · MoMo', acct:'+254 712 345 678'}, recipient:{name:'Self · wallet', acct:'GWANJ7KAMAU2N6Q0W8R4T7Y1U3I5P9SADF3MZXY', bank:'—'}},
+  {ref:'CT-B9N4CX', t:NOW-2.4*H, type:'fiat', fromSym:'USD', fromAmt:40000, toSym:'MWK', toAmt:69500000, sender:{name:'Meridian Trading LLC', acct:'US98 1100 2233 4455 66'}, recipient:{name:'Chisomo Banda', acct:'1002 8899 1122', bank:'National Bank of Malawi'}},
+  {ref:'CT-F3J6LM', t:NOW-3.2*H, type:'sell', fromSym:'XRP', fromAmt:25000, toSym:'GHS', toAmt:232500, sender:{name:'Wallet GXRP…TUV4', acct:'GXRPQ7W2KD9MN3VZ8HA5B1F6E0CTUV4K9M2P4S9V'}, recipient:{name:'Kofi Mensah', acct:'9040 1122 3344', bank:'Stanbic Ghana'}},
+  {ref:'CT-Y7U2EI', t:NOW-4.8*H, type:'fiat', fromSym:'GBP', fromAmt:2200, toSym:'KES', toAmt:367000, sender:{name:'Sarah Lindqvist', acct:'GB29 NWBK 6016 1331 9268 19'}, recipient:{name:'Otieno Odhiambo', acct:'0470 9988 7766', bank:'Equity Bank Kenya'}},
+  {ref:'CT-K1P9QW', t:NOW-6.5*H, type:'swap', fromSym:'BNB', fromAmt:12.5, toSym:'USDT', toAmt:7687.5, sender:{name:'Wallet GBNB…E0C8', acct:'GBNBK8M2P4S9V1Y3C5A7E0G6I9X7V5T3R1PE0C8J8H'}, recipient:{name:'Self', acct:'GBNBK8M2P4S9V1Y3C5A7E0G6I9X7V5T3R1PE0C8J8H', bank:'—'}},
+  {ref:'CT-M6V3ZA', t:NOW-8.9*H, type:'fiat', fromSym:'NGN', fromAmt:950000, toSym:'MZN', toAmt:40200, sender:{name:'Chinedu Eze', acct:'2001 7788 99'}, recipient:{name:'Ana Machava', acct:'1188 9900 1122 004', bank:'BCI Moçambique'}},
+  {ref:'CT-D4G8SB', t:NOW-12.0*H, type:'buy', fromSym:'EUR', fromAmt:500, toSym:'XLM', toAmt:4552, sender:{name:'Lucas Meyer · Revolut', acct:'DE89 3704 0044 0532 0130 00'}, recipient:{name:'Self · wallet', acct:'GLUCM8P2R6V1Y3C5A7E9G0KLN5B9D3F7H1J4L6N8P', bank:'—'}},
+];
+const FLAG_POOL = {
+  low: [[], ['new device'], ['first-time corridor']],
+  mid: [['velocity spike'], ['geo mismatch'], ['amount > corridor limit'], ['new device','velocity spike']],
+  high:[['sanctions fuzzy hit'], ['structuring pattern'], ['PEP match'], ['structuring pattern','geo mismatch']],
+};
+function scoreTx(t){
+  const s = prng(t.ref + t.fromSym, 4, 96);
+  return Math.round(s);
+}
+function enrich(t){
+  if (t.score == null) t.score = scoreTx(t);
+  if (!t.flags){
+    t.flags = t.score < 35 ? FLAG_POOL.low[Math.floor(prng(t.ref+'a',0,FLAG_POOL.low.length))]
+            : t.score < 70 ? FLAG_POOL.mid[Math.floor(prng(t.ref+'b',0,FLAG_POOL.mid.length))]
+            : FLAG_POOL.high[Math.floor(prng(t.ref+'c',0,FLAG_POOL.high.length))];
+  }
+  t.rec = t.score < 35 ? 'approve' : t.score < 70 ? 'hold' : 'reject';
+  t.status = store.decisions[t.ref] || t.status || 'pending';
+  return t;
+}
+const TYPE_LABEL = {swap:'Crypto swap', buy:'Buy (on-ramp)', sell:'Sell (off-ramp)', fiat:'Fiat → fiat'};
+const TYPE_ICON = {swap:'⇄', buy:'↓', sell:'↑', fiat:'⇄'};
+function loadTxns(){
+  const live = loadJSON('ct-admin-queue', []);
+  const all = [...live.map(enrich), ...SEED_TXNS.map(enrich)];
+  all.sort((a,b) => b.t - a.t);
+  return all;
+}
+function decide(ref, status){
+  store.decisions[ref] = status;
+  localStorage.setItem('ct-admin-decisions', JSON.stringify(store.decisions));
+}
+function statusPill(s){
+  return s === 'approved' ? '<span class="pill ok">Approved · released</span>'
+    : s === 'refunded' ? '<span class="pill err">Rejected · refunded</span>'
+    : '<span class="pill warn">In escrow · pending</span>';
+}
+function scoreHTML(score){
+  const col = score < 35 ? 'var(--ok)' : score < 70 ? 'var(--warn)' : 'var(--err)';
+  return `<span class="score-cell"><span class="score-bar"><i style="width:${score}%;background:${col}"></i></span><span class="score-num" style="color:${col}">${score}</span></span>`;
+}
+function recPill(rec){
+  return rec === 'approve' ? '<span class="pill ok">Approve — low risk</span>'
+    : rec === 'hold' ? '<span class="pill warn">Hold — request docs</span>'
+    : '<span class="pill err">Reject &amp; refund</span>';
+}
+
+/* ---------- KYC DATA ---------- */
+const SEED_KYC = [
+  {id:'KYC-1042', type:'Individual', name:'Thabo Mokoena', country:'South Africa 🇿🇦', doc:'National ID + proof of address', submitted:NOW-2*H, risk:'low'},
+  {id:'KYB-0207', type:'Business', name:'Meridian Trading LLC', country:'United States 🇺🇸', doc:'Articles of inc. + UBO declaration', submitted:NOW-5*H, risk:'high'},
+  {id:'KYC-1039', type:'Individual', name:'Wanjiku Kamau', country:'Kenya 🇰🇪', doc:'Passport + M-Pesa statement', submitted:NOW-9*H, risk:'low'},
+  {id:'KYB-0205', type:'Business', name:'Lusaka Agro Exports Ltd', country:'Zambia 🇿🇲', doc:'PACRA registration + bank letter', submitted:NOW-14*H, risk:'medium'},
+  {id:'KYC-1035', type:'Individual', name:'Chisomo Banda', country:'Malawi 🇲🇼', doc:'National ID', submitted:NOW-26*H, risk:'medium'},
+  {id:'KYC-1029', type:'Individual', name:'Adaeze Okafor', country:'Nigeria 🇳🇬', doc:'BVN + driver licence', submitted:NOW-30*H, risk:'low'},
+  {id:'KYB-0199', type:'Business', name:'Sahara Remit SARL', country:'Morocco 🇲🇦', doc:'Registre de commerce + UBO', submitted:NOW-50*H, risk:'high'},
+];
+function kycStatus(e){ return store.kycDec[e.id] || 'pending'; }
+</script>
+
+<script>
+/* ---------- VIEW ROUTER ---------- */
+const TITLES = {overview:'Overview', kyc:'KYC / KYB', txns:'Transactions', accounts:'Accounts & Wallets', fees:'Fees & Rates'};
+$$('.sb-link[data-view]').forEach(l => l.addEventListener('click', () => {
+  $$('.sb-link').forEach(x => x.classList.remove('active'));
+  l.classList.add('active');
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + l.dataset.view).classList.add('active');
+  $('#tbTitle').textContent = TITLES[l.dataset.view];
+  RENDER[l.dataset.view]();
+}));
+
+/* ---------- OVERVIEW ---------- */
+function renderOverview(){
+  const txns = loadTxns();
+  const pending = txns.filter(t => t.status === 'pending');
+  const highRisk = txns.filter(t => t.status === 'pending' && t.score >= 70);
+  const approved = txns.filter(t => t.status === 'approved').length;
+  const decided = txns.filter(t => t.status !== 'pending').length;
+  const volUsd = txns.reduce((s,t) => s + t.fromAmt * (rates[t.fromSym] || 1), 0);
+  const kycPend = SEED_KYC.filter(e => kycStatus(e) === 'pending').length;
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const bars = days.map((d,i) => {
+    const h = prng('vol'+i, 22, 100);
+    return `<g><rect x="${i*44+6}" y="${100-h}" width="26" height="${h}" rx="4" fill="url(#bars)"></rect>
+      <text x="${i*44+19}" y="118" font-size="9.5" fill="var(--faint)" text-anchor="middle" font-family="JetBrains Mono">${d}</text></g>`;
+  }).join('');
+  $('#view-overview').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat"><div class="s-lbl">Pending review</div><div class="s-val">${pending.length}</div><div class="s-sub">${highRisk.length} high-risk · ${kycPend} KYC queued</div></div>
+      <div class="stat"><div class="s-lbl">Volume in escrow · 24h</div><div class="s-val">$${fmtN(volUsd/1000,1)}k</div><div class="s-sub"><span class="up">▲ 12.4%</span> vs yesterday</div></div>
+      <div class="stat"><div class="s-lbl">Approval rate · 7d</div><div class="s-val">${decided ? Math.round(approved/decided*100) : 0}%</div><div class="s-sub">${decided} decisions recorded</div></div>
+      <div class="stat"><div class="s-lbl">Corridors live</div><div class="s-val">${FIAT_LIST.length + CRYPTO_LIST.length}</div><div class="s-sub">${FIAT_LIST.length} fiat · ${CRYPTO_LIST.length} crypto</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Escrow volume — this week</h3><span class="hint">all corridors · USD-equiv</span></div>
+      <div style="padding:22px 26px 12px">
+        <svg viewBox="0 0 330 126" style="width:100%;max-width:520px;display:block">
+          <defs><linearGradient id="bars" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#a86fff"/><stop offset="1" stop-color="#6a48f2" stop-opacity=".35"/></linearGradient></defs>
+          ${bars}
+        </svg>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Needs attention — high risk pending</h3><button class="btn-sm btn-line" onclick="gotoView('txns')">Open transactions →</button></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Ref</th><th>Flow</th><th>Amount</th><th>Risk</th><th>Recommendation</th></tr></thead>
+        <tbody>${highRisk.length ? highRisk.map(t => `
+          <tr class="clickable" onclick="openTx('${t.ref}')">
+            <td class="mono" style="color:var(--accent)">${t.ref}</td>
+            <td>${TYPE_ICON[t.type]} ${t.fromSym} → ${t.toSym}</td>
+            <td class="mono">${fmtN(t.fromAmt,2)} ${t.fromSym}</td>
+            <td>${scoreHTML(t.score)}</td>
+            <td>${recPill(t.rec)}</td>
+          </tr>`).join('') : '<tr><td colspan="5"><div class="empty">Queue is clear — nothing high-risk pending.</div></td></tr>'}
+        </tbody></table></div>
+    </div>`;
+}
+window.gotoView = v => document.querySelector(`.sb-link[data-view="${v}"]`).click();
+
+/* ---------- KYC / KYB ---------- */
+let kycFilter = 'all';
+function renderKYC(){
+  const rows = SEED_KYC.filter(e => kycFilter === 'all' ? true : kycFilter === 'kyb' ? e.type === 'Business' : kycFilter === 'kyc' ? e.type === 'Individual' : kycStatus(e) === 'pending');
+  const riskPill = r => r === 'low' ? '<span class="pill ok">Low</span>' : r === 'medium' ? '<span class="pill warn">Medium</span>' : '<span class="pill err">High</span>';
+  $('#view-kyc').innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Identity review queue</h3>
+        <div class="filters">
+          ${[['all','All'],['kyc','Individuals'],['kyb','Businesses'],['pending','Pending']].map(([k,l]) =>
+            `<button class="f-chip ${kycFilter===k?'active':''}" onclick="setKycFilter('${k}')">${l}</button>`).join('')}
+        </div>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Country</th><th>Documents</th><th>Risk</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map(e => {
+          const st = kycStatus(e);
+          return `<tr>
+            <td class="mono" style="color:var(--accent)">${e.id}</td>
+            <td style="font-weight:600">${e.name}</td>
+            <td><span class="pill ${e.type==='Business'?'info':'mut'}">${e.type === 'Business' ? 'KYB' : 'KYC'}</span></td>
+            <td>${e.country}</td>
+            <td style="color:var(--muted);font-size:12.5px">${e.doc}</td>
+            <td>${riskPill(e.risk)}</td>
+            <td class="mono" style="color:var(--muted);font-size:12px">${ago(e.submitted)}</td>
+            <td>${st === 'approved' ? '<span class="pill ok">Verified</span>' : st === 'rejected' ? '<span class="pill err">Rejected</span>' : '<span class="pill warn">Pending</span>'}</td>
+            <td style="white-space:nowrap;text-align:right">${st === 'pending' ? `
+              <button class="btn-sm btn-ok" onclick="kycAct('${e.id}','approved')">Approve</button>
+              <button class="btn-sm btn-no" onclick="kycAct('${e.id}','rejected')">Reject</button>` : `<button class="btn-sm btn-line" onclick="kycAct('${e.id}','pending')">Reopen</button>`}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="9"><div class="empty">Nothing in this view.</div></td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+  const pend = SEED_KYC.filter(e => kycStatus(e) === 'pending').length;
+  $('#kycBadge').textContent = pend; $('#kycBadge').style.display = pend ? '' : 'none';
+}
+window.setKycFilter = f => { kycFilter = f; renderKYC(); };
+window.kycAct = (id, st) => {
+  store.kycDec[id] = st;
+  localStorage.setItem('ct-admin-kyc', JSON.stringify(store.kycDec));
+  toast(st === 'approved' ? `${id} verified` : st === 'rejected' ? `${id} rejected` : `${id} reopened`, st === 'approved' ? 'ok' : st === 'rejected' ? 'err' : '');
+  renderKYC();
+};
+</script>
+
+<script>
+/* ---------- TRANSACTIONS ---------- */
+let txFilter = 'all', txSearch = '';
+function renderTxns(){
+  let txns = loadTxns();
+  if (txFilter !== 'all') txns = txns.filter(t => txFilter === 'refunded' ? t.status === 'refunded' : t.status === txFilter);
+  if (txSearch) txns = txns.filter(t => (t.ref + t.sender.name + (t.recipient.name||'')).toLowerCase().includes(txSearch));
+  const pend = loadTxns().filter(t => t.status === 'pending').length;
+  $('#txBadge').textContent = pend; $('#txBadge').style.display = pend ? '' : 'none';
+  $('#view-txns').innerHTML = `
+    <div class="rec-box" style="margin-bottom:22px">
+      <b>Escrow screening model</b>
+      Every inbound payment — crypto to the admin escrow wallet, fiat to the settlement account — is held for
+      compliance scoring before release. <b>Approve</b> forwards funds to the intended destination;
+      <b>Reject</b> returns them to the sender. Nothing settles end-to-end without a decision here.
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="filters">
+          ${[['all','All'],['pending','Pending'],['approved','Approved'],['refunded','Refunded']].map(([k,l]) =>
+            `<button class="f-chip ${txFilter===k?'active':''}" onclick="setTxFilter('${k}')">${l}</button>`).join('')}
+        </div>
+        <input class="search-inp" id="txSearch" placeholder="Search ref, sender, recipient…" value="${txSearch.replace(/"/g,'&quot;')}">
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Ref</th><th>Type</th><th>Flow</th><th>Amount</th><th>Sender</th><th>Risk score</th><th>Recommendation</th><th>Status</th><th>Time</th><th></th></tr></thead>
+        <tbody>${txns.map(t => `
+          <tr class="clickable" onclick="openTx('${t.ref}')">
+            <td class="mono" style="color:var(--accent)">${t.ref}</td>
+            <td style="white-space:nowrap">${TYPE_ICON[t.type]} ${TYPE_LABEL[t.type]}</td>
+            <td style="font-weight:700;white-space:nowrap">${t.fromSym} → ${t.toSym}</td>
+            <td class="mono" style="white-space:nowrap">${fmtN(t.fromAmt, 2)} ${t.fromSym}</td>
+            <td style="color:var(--muted);font-size:12.5px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.sender.name}</td>
+            <td>${scoreHTML(t.score)}</td>
+            <td>${recPill(t.rec)}</td>
+            <td>${statusPill(t.status)}</td>
+            <td class="mono" style="color:var(--muted);font-size:11.5px;white-space:nowrap">${ago(t.t)}</td>
+            <td style="white-space:nowrap;text-align:right" onclick="event.stopPropagation()">${t.status === 'pending' ? `
+              <button class="btn-sm btn-ok" onclick="txAct('${t.ref}','approved')">Approve</button>
+              <button class="btn-sm btn-no" onclick="txAct('${t.ref}','refunded')">Refund</button>` : ''}</td>
+          </tr>`).join('') || '<tr><td colspan="10"><div class="empty">No transactions match.</div></td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+  $('#txSearch').addEventListener('input', e => { txSearch = e.target.value.toLowerCase(); renderTxns(); const el = $('#txSearch'); el.focus(); el.setSelectionRange(el.value.length, el.value.length); });
+}
+window.setTxFilter = f => { txFilter = f; renderTxns(); };
+window.txAct = (ref, st) => {
+  decide(ref, st);
+  const t = loadTxns().find(x => x.ref === ref);
+  toast(st === 'approved'
+    ? `${ref} approved — ${fmtN(t.toAmt,2)} ${t.toSym} released to destination`
+    : `${ref} rejected — ${fmtN(t.fromAmt,2)} ${t.fromSym} returned to sender`, st === 'approved' ? 'ok' : 'err');
+  renderTxns(); renderKYC();
+  const active = document.querySelector('.sb-link.active');
+  if (active && active.dataset.view !== 'txns') RENDER[active.dataset.view]();
+  closeDrawer();
+};
+
+/* ---------- TX DRAWER (escrow detail) ---------- */
+let openRef = null;
+window.openTx = ref => {
+  openRef = ref;
+  const t = loadTxns().find(x => x.ref === ref);
+  if (!t) return;
+  $('#drRef').textContent = t.ref;
+  const isCryptoIn = CRYPTO_LIST.includes(t.fromSym);
+  const escrowAcct = isCryptoIn ? getWallet(t.fromSym) : (getAccount(t.fromSym) || {}).acct || '—';
+  const escrowLabel = isCryptoIn ? `Admin escrow wallet · ${t.fromSym}` : `Settlement account · ${t.fromSym}`;
+  const steps = t.status === 'refunded'
+    ? [{d:1,tt:'Received in escrow',s:escrowAcct},{d:1,tt:'Screening complete',s:`score ${t.score} · ${t.flags.join(', ') || 'no flags'}`},{d:2,tt:'Rejected — refunded to sender',s:t.sender.acct}]
+    : t.status === 'approved'
+    ? [{d:1,tt:'Received in escrow',s:escrowAcct},{d:1,tt:'Screening complete',s:`score ${t.score} · approved by ops`},{d:1,tt:'Released to destination',s:t.recipient.acct}]
+    : [{d:1,tt:'Received in escrow',s:escrowAcct},{d:0,now:1,tt:'Awaiting compliance decision',s:`score ${t.score} · ${t.rec === 'approve' ? 'auto-approvable' : t.rec === 'hold' ? 'docs recommended' : 'rejection recommended'}`},{d:0,tt:'Release to destination or refund',s:t.recipient.acct}];
+  $('#drBody').innerHTML = `
+    <div class="d-section">
+      <h4>Escrow routing</h4>
+      <div class="escrow">${steps.map(s => `
+        <div class="e-step ${s.d === 1 ? 'done' : s.now ? 'now' : s.d === 2 ? 'rej' : 'muted'}">
+          <span class="e-dot">${s.d === 1 ? '✓' : s.d === 2 ? '✕' : ''}</span>
+          <div class="e-title">${s.tt}</div><div class="e-sub">${s.s}</div>
+        </div>`).join('')}</div>
+    </div>
+    <div class="d-section">
+      <h4>Transaction</h4>
+      <div class="d-row"><span>Type</span><span>${TYPE_LABEL[t.type]}</span></div>
+      <div class="d-row"><span>Sends</span><span class="mono">${fmtN(t.fromAmt,2)} ${t.fromSym}</span></div>
+      <div class="d-row"><span>Receives</span><span class="mono">${fmtN(t.toAmt,2)} ${t.toSym}</span></div>
+      <div class="d-row"><span>USD equivalent</span><span class="mono">$${fmtN(t.fromAmt * (rates[t.fromSym] || 1))}</span></div>
+      <div class="d-row"><span>Initiated</span><span class="mono">${ago(t.t)}</span></div>
+    </div>
+    <div class="d-section">
+      <h4>Sender</h4>
+      <div class="d-row"><span>Name / source</span><span>${t.sender.name}</span></div>
+      <div class="d-row"><span>Account</span><span class="mono">${t.sender.acct}</span></div>
+    </div>
+    <div class="d-section">
+      <h4>Recipient</h4>
+      <div class="d-row"><span>Name</span><span>${t.recipient.name || '—'}</span></div>
+      <div class="d-row"><span>Account</span><span class="mono">${t.recipient.acct || '—'}</span></div>
+      ${t.recipient.bank && t.recipient.bank !== '—' ? `<div class="d-row"><span>Bank</span><span>${t.recipient.bank}</span></div>` : ''}
+    </div>
+    <div class="d-section">
+      <h4>Risk screening — score ${t.score}/100</h4>
+      <div style="margin-bottom:12px">${scoreHTML(t.score)}</div>
+      ${t.flags.length ? t.flags.map(f => `<span class="flag ${t.score >= 70 ? 'sev' : ''}">${f}</span>`).join('') : '<span class="flag" style="background:rgba(47,212,126,.12);color:var(--ok)">no flags raised</span>'}
+    </div>
+    <div class="d-section">
+      <h4>Engine recommendation</h4>
+      <div class="rec-box">${t.rec === 'approve'
+        ? '<b>Approve — low risk</b>All checks passed. Funds can be released to the destination immediately.'
+        : t.rec === 'hold'
+        ? '<b>Hold — request documentation</b>Moderate risk signals. Ask the sender for source-of-funds or invoice proof before releasing.'
+        : '<b>Reject &amp; refund</b>High-risk signals detected. Return funds to the sender account and file a review note.'}</div>
+    </div>`;
+  $('#drFoot').innerHTML = t.status === 'pending'
+    ? `<button class="btn-sm btn-ok" onclick="txAct('${t.ref}','approved')">✓ Approve — release to destination</button>
+       <button class="btn-sm btn-no" onclick="txAct('${t.ref}','refunded')">✕ Reject — refund sender</button>`
+    : `<span style="font-size:12.5px;color:var(--muted);align-self:center">Decision recorded: ${t.status === 'approved' ? 'released to destination' : 'refunded to sender'}.</span>
+       <button class="btn-sm btn-line" onclick="txAct('${t.ref}','pending')">Reopen</button>`;
+  $('#txDrawer').classList.add('open');
+};
+function closeDrawer(){ $('#txDrawer').classList.remove('open'); }
+$('#drClose').addEventListener('click', closeDrawer);
+addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+</script>
+
+<script>
+/* ---------- ACCOUNTS & WALLETS ---------- */
+function renderAccounts(){
+  const fiatCards = FIAT_LIST.map(sym => {
+    const a = getAccount(sym);
+    return `<div class="panel" style="margin-bottom:0">
+      <div class="panel-head"><h3>${sym} settlement account</h3><span class="hint">${a.rail}</span></div>
+      <div style="padding:18px 22px">
+        <div class="inp-row"><span class="field-lbl">Bank / institution</span><input class="inp" id="ac-${sym}-bank" value="${a.bank}"></div>
+        <div class="inp-row"><span class="field-lbl">Account name</span><input class="inp" id="ac-${sym}-name" value="${a.name}"></div>
+        <div class="inp-row"><span class="field-lbl">Account number / IBAN</span><input class="inp" id="ac-${sym}-acct" value="${a.acct}"></div>
+        <div class="inp-row" style="margin-bottom:14px"><span class="field-lbl">Payment rail</span><input class="inp" id="ac-${sym}-rail" value="${a.rail}"></div>
+        <button class="btn-save" style="padding:10px 22px;font-size:13px" onclick="saveAccount('${sym}')">Save ${sym}</button>
+      </div>
+    </div>`;
+  }).join('');
+  const walletCards = CRYPTO_LIST.map(sym => `
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-head"><h3>${sym} escrow wallet</h3><span class="hint">inbound held here pending screening</span></div>
+      <div style="padding:18px 22px">
+        <div class="inp-row" style="margin-bottom:14px"><span class="field-lbl">Wallet address (Stellar)</span>
+          <input class="inp" id="wa-${sym}" value="${getWallet(sym)}"></div>
+        <button class="btn-save" style="padding:10px 22px;font-size:13px" onclick="saveWallet('${sym}')">Save ${sym}</button>
+      </div>
+    </div>`).join('');
+  $('#view-accounts').innerHTML = `
+    <div class="rec-box" style="margin-bottom:8px"><b>Where inbound funds are held.</b>
+    Fiat senders deposit into the settlement account shown below for their currency (displayed read-only on the exchange).
+    Crypto swaps route to the escrow wallet per asset. Both are held until a compliance decision is made. Changes apply to the exchange UI on its next load.</div>
+    <div class="eyebrow">Fiat settlement accounts</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px">${fiatCards}</div>
+    <div class="eyebrow">Crypto escrow wallets</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px">${walletCards}</div>`;
+}
+window.saveAccount = sym => {
+  store.accounts[sym] = {
+    bank: $(`#ac-${sym}-bank`).value.trim(), name: $(`#ac-${sym}-name`).value.trim(),
+    acct: $(`#ac-${sym}-acct`).value.trim(), rail: $(`#ac-${sym}-rail`).value.trim(),
+  };
+  localStorage.setItem('ct-admin-accounts', JSON.stringify(store.accounts));
+  toast(`${sym} settlement account updated — live on the exchange`, 'ok');
+};
+window.saveWallet = sym => {
+  store.wallets[sym] = $(`#wa-${sym}`).value.trim();
+  localStorage.setItem('ct-admin-wallets', JSON.stringify(store.wallets));
+  toast(`${sym} escrow wallet updated`, 'ok');
+};
+
+/* ---------- FEES & RATES ---------- */
+function renderFees(){
+  const methodNames = {card:'Debit / Credit Card', bank:'Bank Transfer', paypal:'PayPal', valr:'VALR', revolut:'Revolut', momo:'MoMo · Mobile Money'};
+  const feeRow = (id, label, val, note) => `
+    <div style="display:flex;align-items:center;gap:16px;padding:13px 22px;border-bottom:1px solid var(--border)">
+      <div style="flex:1"><div style="font-weight:600;font-size:13.5px">${label}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">${note}</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><input class="inp fee-inp" data-fee="${id}" type="number" step="0.1" min="0" value="${val}" style="width:96px;text-align:right"><span class="mono" style="color:var(--muted);font-size:12px">%</span></div>
+    </div>`;
+  const rateRows = [...CRYPTO_LIST, ...FIAT_LIST].map(sym => `
+    <tr>
+      <td style="font-weight:700">${sym}</td>
+      <td style="color:var(--muted);font-size:12px">${CRYPTO_LIST.includes(sym) ? 'crypto' : 'fiat'}</td>
+      <td class="mono" style="color:var(--muted)">${DEFAULT_RATES[sym]}</td>
+      <td><input class="inp rate-inp" data-sym="${sym}" type="number" step="any" min="0" value="${rates[sym]}" style="width:150px;text-align:right;padding:8px 12px"></td>
+    </tr>`).join('');
+  $('#view-fees').innerHTML = `
+    <div class="eyebrow" style="margin-top:0">Transaction fees</div>
+    <div class="panel">
+      <div class="panel-head"><h3>Fee schedule</h3><span class="hint">applies to new quotes immediately</span></div>
+      ${feeRow('corridor', 'Fiat → fiat corridor fee', fees.corridor, 'Cross-border fiat payment leg (anchor payout cost + margin)')}
+      ${feeRow('sell', 'Off-ramp fee (Sell tab)', fees.sell, 'Crypto → bank payout processing')}
+      ${feeRow('pool', 'DEX pool fee', fees.pool, 'Liquidity pool fee on every swap path')}
+      ${Object.keys(methodNames).map(k => feeRow('m:'+k, 'Buy via ' + methodNames[k], fees.methods[k], 'On-ramp processing for this method')).join('')}
+      <div style="padding:18px 22px"><button class="btn-save" onclick="saveFees()">Save fee schedule</button></div>
+    </div>
+    <div class="eyebrow">Exchange rates</div>
+    <div class="panel">
+      <div class="panel-head"><h3>Asset rates (USD)</h3><span class="hint">base rate per unit — overrides market sim on the exchange</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Asset</th><th>Kind</th><th>Default</th><th>Active rate (USD)</th></tr></thead>
+        <tbody>${rateRows}</tbody>
+      </table></div>
+      <div style="padding:18px 22px"><button class="btn-save" onclick="saveRates()">Publish rates</button></div>
+    </div>`;
+}
+window.saveFees = () => {
+  const out = {corridor: fees.corridor, sell: fees.sell, pool: fees.pool, methods: {...fees.methods}};
+  $$('.fee-inp').forEach(i => {
+    const k = i.dataset.fee, v = parseFloat(i.value);
+    if (!isFinite(v) || v < 0) return;
+    if (k.startsWith('m:')) out.methods[k.slice(2)] = v; else out[k] = v;
+  });
+  Object.assign(fees, {...out, methods:{...out.methods}});
+  localStorage.setItem('ct-admin-fees', JSON.stringify(out));
+  toast('Fee schedule published — applies to the exchange on next load', 'ok');
+};
+window.saveRates = () => {
+  const out = {};
+  $$('.rate-inp').forEach(i => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) out[i.dataset.sym] = v; });
+  Object.assign(rates, out);
+  localStorage.setItem('ct-admin-rates', JSON.stringify(out));
+  toast('Exchange rates published — live on the exchange', 'ok');
+};
+
+/* ---------- INIT ---------- */
+const RENDER = {overview:renderOverview, kyc:renderKYC, txns:renderTxns, accounts:renderAccounts, fees:renderFees};
+renderOverview(); renderKYC(); renderTxns();
+</script>
+</body>
+</html>

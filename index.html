@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrossTrade — Cross-border swaps on Stellar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --font-display:'Bebas Neue', 'Arial Narrow', sans-serif;
+  --font-body:'Inter', -apple-system, 'PingFang SC', sans-serif;
+  --font-mono:'JetBrains Mono', 'Fira Code', monospace;
+  --accent-soft:#CA9FFF;
+  --accent-strong:#7C5CFF;
+  --accent-pink:#FCCEEE;
+  --neon:#FDFF6D;
+  --grad:linear-gradient(100deg,#6a48f2 0%,#a86fff 45%,#fc9fdf 100%);
+  --ok:#2fd47e;
+  --err:#ff5d5d;
+  --radius:16px;
+  --nav-h:72px;
+}
+[data-theme="dark"]{
+  --bg:#000000;
+  --bg-2:#0a0a0d;
+  --surface:#0e0e12;
+  --surface-2:#16161d;
+  --surface-3:#1e1e28;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.55);
+  --faint:rgba(255,255,255,.32);
+  --border:rgba(255,255,255,.11);
+  --border-strong:rgba(255,255,255,.22);
+  --accent:#CA9FFF;
+  --btn-bg:#CA9FFF;
+  --btn-text:#0a0a0a;
+  --hover:rgba(255,255,255,.06);
+  --glass:rgba(10,10,13,.72);
+  --input:#101016;
+  --shadow:0 24px 80px rgba(0,0,0,.6);
+  --gridline:rgba(255,255,255,.05);
+}
+[data-theme="light"]{
+  --bg:#ffffff;
+  --bg-2:#f3f2ff;
+  --surface:#ffffff;
+  --surface-2:#f6f5ff;
+  --surface-3:#eceaff;
+  --text:#16161a;
+  --muted:rgba(22,22,26,.58);
+  --faint:rgba(22,22,26,.34);
+  --border:rgba(22,22,26,.12);
+  --border-strong:rgba(22,22,26,.26);
+  --accent:#6a48f2;
+  --btn-bg:#16161a;
+  --btn-text:#ffffff;
+  --hover:rgba(22,22,26,.05);
+  --glass:rgba(255,255,255,.78);
+  --input:#f6f5ff;
+  --shadow:0 24px 80px rgba(106,72,242,.14);
+  --gridline:rgba(22,22,26,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  transition:background .5s ease,color .5s ease;
+}
+::selection{background:var(--accent);color:#000}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+.mono{font-family:var(--font-mono);font-feature-settings:"tnum"}
+
+/* ============ GRID OVERLAY ============ */
+.grid-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:
+    repeating-linear-gradient(90deg,var(--gridline) 0 1px,transparent 1px calc(100%/12));
+  mask-image:linear-gradient(to bottom,black 0%,transparent 100vh);
+  -webkit-mask-image:linear-gradient(to bottom,black 0%,transparent 100vh);
+}
+
+/* ============ PRELOADER ============ */
+#preloader{position:fixed;inset:0;z-index:200;display:flex}
+#preloader .col{flex:1;background:#000;transform:scaleY(1);transform-origin:50% 0%}
+#preloader .pl-word{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:clamp(48px,9vw,120px);
+  color:#fff;letter-spacing:.04em;mix-blend-mode:difference;z-index:2;
+}
+#preloader.done .col{transform:scaleY(0);transition:transform .8s cubic-bezier(.65,0,.35,1)}
+#preloader.done .pl-word{opacity:0;transition:opacity .3s}
+#preloader.gone{display:none}
+
+/* ============ CURSOR ============ */
+.cursor{
+  pointer-events:none;mix-blend-mode:difference;
+  width:100vw;height:100vh;position:fixed;inset:0;z-index:150;
+  opacity:0;transition:opacity .25s;
+}
+.cursor .dot{
+  mix-blend-mode:difference;background:#fff;border-radius:50%;
+  width:14px;height:14px;position:absolute;transform:translate(-50%,-50%);
+  transition:width .2s,height .2s;
+}
+.cursor.big .dot{width:44px;height:44px}
+body:hover .cursor{opacity:1}
+@media (pointer:coarse){.cursor{display:none}}
+
+/* ============ NAV ============ */
+nav{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(20px,4vw,56px);
+  background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  transition:background .5s;
+}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-size:26px;letter-spacing:.05em;cursor:pointer}
+.logo svg{width:30px;height:30px}
+.nav-links{display:flex;gap:34px;align-items:center}
+.nav-link{font-size:14px;font-weight:500;letter-spacing:.02em;position:relative;overflow:hidden;display:inline-flex;height:1.1em;line-height:1.1em}
+.nav-link .char{display:inline-block;position:relative;transition:transform .6s cubic-bezier(.65,0,.35,1)}
+.nav-link .char::before{content:attr(data-char);position:absolute;transform:translateY(-1.05em);color:var(--accent)}
+.nav-link:hover .char:nth-of-type(odd){transform:translateY(1.05em)}
+.nav-link:hover .char:nth-of-type(even){transform:translateY(-1.05em)}
+.nav-right{display:flex;align-items:center;gap:14px}
+.theme-toggle{
+  width:52px;height:28px;border-radius:99px;border:1px solid var(--border-strong);
+  position:relative;background:var(--surface-2);transition:background .4s;
+}
+.theme-toggle .thumb{
+  position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);transition:transform .45s cubic-bezier(.65,0,.35,1),background .4s;
+  display:flex;align-items:center;justify-content:center;
+}
+.theme-toggle .thumb svg{width:12px;height:12px;stroke:#0a0a0a}
+[data-theme="light"] .theme-toggle .thumb{transform:translateX(24px)}
+.btn-connect{
+  background:var(--btn-bg);color:var(--btn-text);font-weight:600;font-size:14px;
+  padding:11px 22px;border-radius:99px;letter-spacing:.01em;
+  transition:transform .25s,opacity .25s;display:flex;align-items:center;gap:8px;
+}
+.btn-connect:hover{transform:translateY(-2px);opacity:.9}
+.btn-connect.connected{background:var(--surface-2);color:var(--text);border:1px solid var(--border-strong);font-family:var(--font-mono);font-size:13px}
+@media(max-width:860px){.nav-links{display:none}}
+
+/* ============ HERO ============ */
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:calc(var(--nav-h) + 40px) 20px 120px;overflow:hidden}
+#shader{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.hero-inner{position:relative;z-index:2;text-align:center;max-width:1400px}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;padding:8px 18px;border-radius:99px;
+  border:1px solid var(--border-strong);margin-bottom:28px;background:var(--glass);backdrop-filter:blur(8px);
+}
+.hero-badge .pulse{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{
+  font-family:var(--font-display);
+  font-size:clamp(72px,13vw,220px);
+  line-height:.88;letter-spacing:.01em;font-weight:400;
+  text-transform:uppercase;
+}
+.hero h1 .line{display:block;overflow:clip}
+.hero h1 .line>span{display:inline-block;transform:translateY(110%)}
+.hero h1 .stroke{
+  color:transparent;-webkit-text-stroke:2px var(--text);
+}
+.hero h1 .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{
+  margin:34px auto 0;max-width:620px;font-size:clamp(15px,1.6vw,18px);
+  line-height:1.65;color:var(--muted);
+}
+.hero-sub b{color:var(--text);font-weight:600}
+.hero-ctas{display:flex;gap:16px;justify-content:center;margin-top:42px;flex-wrap:wrap}
+.btn-primary{
+  background:var(--btn-bg);color:var(--btn-text);font-weight:600;font-size:15px;
+  padding:17px 36px;border-radius:99px;display:inline-flex;align-items:center;gap:10px;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;
+}
+.btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:var(--shadow)}
+.btn-ghost{
+  font-weight:600;font-size:15px;padding:17px 32px;border-radius:99px;
+  border:1px solid var(--border-strong);display:inline-flex;align-items:center;gap:10px;
+  transition:background .3s,border-color .3s;
+}
+.btn-ghost:hover{background:var(--hover);border-color:var(--accent)}
+.hero-scroll{
+  position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:2;
+  font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--faint);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.hero-scroll .bar{width:1px;height:44px;background:var(--border-strong);position:relative;overflow:hidden}
+.hero-scroll .bar::after{content:'';position:absolute;top:-100%;left:0;width:100%;height:100%;background:var(--accent);animation:scrolldrop 2s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes scrolldrop{to{top:100%}}
+
+/* ============ TICKER ============ */
+.ticker{
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:var(--bg-2);overflow:hidden;position:relative;z-index:3;
+}
+.ticker-track{display:flex;width:max-content;animation:marquee 38s linear infinite;padding:16px 0}
+.ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.tick{display:flex;align-items:center;gap:12px;padding:0 34px;border-right:1px solid var(--border);white-space:nowrap}
+.tick .sym{font-weight:700;font-size:14px;letter-spacing:.04em}
+.tick .px{font-family:var(--font-mono);font-size:14px}
+.tick .chg{font-family:var(--font-mono);font-size:12px;font-weight:500}
+.tick .up{color:var(--ok)}.tick .dn{color:var(--err)}
+.tick .ticon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+
+/* ============ SECTIONS COMMON ============ */
+section{position:relative;z-index:2}
+.container{max-width:1280px;margin:0 auto;padding:0 clamp(20px,4vw,56px)}
+.eyebrow{
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--accent);display:flex;align-items:center;gap:12px;margin-bottom:22px;
+}
+.eyebrow::before{content:'';width:32px;height:1px;background:var(--accent)}
+.h2{font-family:var(--font-display);font-size:clamp(48px,7vw,104px);line-height:.92;letter-spacing:.015em;text-transform:uppercase;font-weight:400}
+.reveal{opacity:0;transform:translateY(48px);transition:opacity .9s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ============ APP / SWAP ============ */
+#app{padding:120px 0 80px;background:var(--bg)}
+.app-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;margin-bottom:56px}
+.app-head p{max-width:440px;color:var(--muted);font-size:15px;line-height:1.7}
+.dex{
+  display:grid;grid-template-columns:minmax(340px,480px) 1fr;gap:56px;align-items:start;
+}
+@media(max-width:1020px){.dex{grid-template-columns:1fr}}
+.swap-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  padding:10px;box-shadow:var(--shadow);position:sticky;top:calc(var(--nav-h) + 24px);
+}
+.swap-tabs{display:flex;gap:4px;padding:4px;background:var(--surface-2);border-radius:14px;margin-bottom:10px}
+.swap-tab{
+  flex:1;padding:11px;border-radius:11px;font-size:14px;font-weight:600;color:var(--muted);
+  transition:all .3s;letter-spacing:.02em;
+}
+.swap-tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.14)}
+.swap-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 14px}
+.swap-head .lbl{font-size:13px;font-weight:600;color:var(--muted)}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  transition:background .25s,transform .4s;
+}
+.icon-btn:hover{background:var(--hover)}
+.icon-btn:active{transform:rotate(180deg)}
+.icon-btn svg{width:17px;height:17px;stroke:var(--muted)}
+.token-box{
+  background:var(--input);border:1px solid transparent;border-radius:18px;padding:16px 18px 14px;
+  transition:border-color .25s,background .25s;
+}
+.token-box:focus-within{border-color:var(--accent)}
+.token-box .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.token-box input{
+  background:none;border:none;outline:none;font-family:var(--font-mono);
+  font-size:30px;font-weight:500;width:60%;color:var(--text);
+}
+.token-box input::placeholder{color:var(--faint)}
+.token-box .sub{display:flex;justify-content:space-between;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.token-box .sub .bal{cursor:pointer;font-family:var(--font-mono)}
+.token-box .sub .bal:hover{color:var(--accent)}
+.token-btn{
+  display:flex;align-items:center;gap:9px;background:var(--surface-3);
+  padding:9px 14px 9px 9px;border-radius:99px;font-weight:700;font-size:16px;
+  transition:transform .25s,background .25s;flex-shrink:0;border:1px solid var(--border);
+}
+.token-btn:hover{transform:scale(1.04)}
+.token-btn svg{width:12px;height:12px;stroke:var(--muted)}
+.tk-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden}
+.tk-icon.fiat{border-radius:8px;font-size:13px}
+.flip-wrap{display:flex;justify-content:center;margin:-13px 0;position:relative;z-index:2}
+.flip-btn{
+  width:40px;height:40px;border-radius:12px;background:var(--surface);border:1px solid var(--border-strong);
+  display:flex;align-items:center;justify-content:center;transition:transform .45s cubic-bezier(.34,1.56,.64,1),border-color .25s;
+}
+.flip-btn:hover{border-color:var(--accent);transform:rotate(180deg)}
+.flip-btn svg{width:16px;height:16px;stroke:var(--accent)}
+.quote-meta{padding:14px 10px 6px;font-size:12.5px;color:var(--muted)}
+.quote-meta .qm-row{display:flex;justify-content:space-between;padding:4px 0}
+.quote-meta .qm-row span:last-child{font-family:var(--font-mono);color:var(--text)}
+.quote-meta .route{color:var(--accent)}
+.swap-submit{
+  width:100%;margin-top:12px;padding:18px;border-radius:16px;
+  background:var(--grad);color:#fff;font-size:16px;font-weight:700;letter-spacing:.02em;
+  transition:transform .25s,filter .25s,opacity .25s;position:relative;overflow:hidden;
+}
+.swap-submit:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.1)}
+.swap-submit:disabled{opacity:.45;cursor:not-allowed}
+.swap-submit .spinner{
+  width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:-4px;margin-right:8px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ramp extra fields */
+.ramp-fields{padding:4px 2px 0}
+.ramp-fields label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 7px;letter-spacing:.04em;text-transform:uppercase}
+.ramp-fields .field{
+  width:100%;background:var(--input);border:1px solid var(--border);border-radius:13px;
+  padding:14px 16px;font-size:14px;outline:none;transition:border-color .25s;color:var(--text);
+  margin-bottom:10px;
+}
+.ramp-fields .field:focus{border-color:var(--accent)}
+.field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-pair .field{margin-bottom:0}
+.admin-acct{
+  border:1px solid var(--border-strong);border-radius:14px;background:var(--input);
+  padding:14px 16px 10px;margin-bottom:4px;
+}
+.admin-acct .aa-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.admin-acct .aa-tag{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.admin-acct .aa-copy{
+  font-size:11px;font-weight:600;color:var(--muted);padding:5px 11px;border-radius:8px;
+  border:1px solid var(--border);transition:all .25s;
+}
+.admin-acct .aa-copy:hover{color:var(--accent);border-color:var(--accent)}
+.admin-acct .aa-row{display:flex;justify-content:space-between;gap:14px;padding:3.5px 0;font-size:12.5px}
+.admin-acct .aa-row span:first-child{color:var(--muted);flex-shrink:0}
+.admin-acct .aa-row span:last-child{font-family:var(--font-mono);font-weight:500;text-align:right;word-break:break-all}
+.admin-acct .aa-note{font-size:11px;color:var(--faint);line-height:1.55;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border)}
+.pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pay-method{
+  border:1px solid var(--border);border-radius:13px;padding:13px 14px;text-align:left;
+  transition:border-color .25s,background .25s;
+}
+.pay-method.active{border-color:var(--accent);background:var(--hover)}
+.pay-method .pm-name{font-size:13.5px;font-weight:600}
+.pay-method .pm-fee{font-size:11.5px;color:var(--muted);font-family:var(--font-mono);margin-top:3px}
+/* side panel: pairs table + activity */
+.dex-side{display:flex;flex-direction:column;gap:26px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border)}
+.panel-head h3{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.panel-head .tag{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.pair-row{
+  display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center;
+  padding:13px 22px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;
+}
+.pair-row:last-child{border-bottom:none}
+.pair-row:hover{background:var(--hover)}
+.pair-row .p-name{font-weight:700;font-size:14px}
+.pair-row .p-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.pair-row .p-px{font-family:var(--font-mono);font-size:13.5px;text-align:right}
+.pair-row .p-chg{font-family:var(--font-mono);font-size:12px;text-align:right;min-width:64px}
+.spark{width:72px;height:26px}
+.spark path{fill:none;stroke-width:1.5}
+.act-row{display:flex;gap:13px;padding:14px 22px;border-bottom:1px solid var(--border);align-items:center}
+.act-row:last-child{border-bottom:none}
+.act-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.act-ico.swap{background:rgba(202,159,255,.16);color:var(--accent)}
+.act-ico.buy{background:rgba(47,212,126,.14);color:var(--ok)}
+.act-ico.sell{background:rgba(255,93,93,.13);color:var(--err)}
+.act-row .a-main{font-size:13.5px;font-weight:600}
+.act-row .a-sub{font-size:11.5px;color:var(--muted);font-family:var(--font-mono);margin-top:2px}
+.act-row .a-time{margin-left:auto;font-size:11px;color:var(--faint);white-space:nowrap}
+.empty-state{padding:38px 22px;text-align:center;color:var(--faint);font-size:13px;line-height:1.7}
+
+/* ============ FEATURES (asymmetric sticky) ============ */
+#features{padding:130px 0;background:var(--bg-2);transition:background .5s}
+.feat-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:70px;align-items:start}
+@media(max-width:920px){.feat-grid{grid-template-columns:1fr}}
+.feat-sticky{position:sticky;top:calc(var(--nav-h) + 40px)}
+.feat-sticky p{color:var(--muted);font-size:16px;line-height:1.75;margin-top:26px;max-width:400px}
+.feat-cards{display:flex;flex-direction:column;gap:22px}
+.feat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:34px 36px;transition:transform .35s,border-color .35s;
+}
+.feat-card:hover{transform:translateX(8px);border-color:var(--accent)}
+.feat-card .f-num{font-family:var(--font-mono);font-size:12px;color:var(--accent);letter-spacing:.2em;margin-bottom:16px}
+.feat-card h3{font-size:21px;font-weight:700;letter-spacing:-.01em;margin-bottom:10px}
+.feat-card p{color:var(--muted);font-size:14.5px;line-height:1.7}
+
+/* ============ STATS BENTO ============ */
+#stats{padding:120px 0}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:22px;overflow:hidden;margin-top:60px}
+@media(max-width:860px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);padding:42px 34px;transition:background .3s}
+.stat:hover{background:var(--surface-2)}
+.stat .s-val{font-family:var(--font-display);font-size:clamp(44px,5vw,72px);line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .s-lbl{font-size:13px;color:var(--muted);margin-top:12px;letter-spacing:.04em}
+
+/* ============ STEPS ============ */
+#how{padding:120px 0 140px;background:var(--bg-2);transition:background .5s}
+.steps{margin-top:70px;display:flex;flex-direction:column}
+.step{
+  display:grid;grid-template-columns:120px 1fr 1.1fr;gap:36px;align-items:baseline;
+  padding:44px 0;border-top:1px solid var(--border-strong);
+}
+.step:last-child{border-bottom:1px solid var(--border-strong)}
+.step .n{font-family:var(--font-display);font-size:56px;color:transparent;-webkit-text-stroke:1.5px var(--accent)}
+.step h3{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.step p{color:var(--muted);font-size:15px;line-height:1.7}
+@media(max-width:760px){.step{grid-template-columns:64px 1fr}.step p{grid-column:2}}
+
+/* ============ FOOTER ============ */
+footer{border-top:1px solid var(--border);padding:70px 0 40px;position:relative;z-index:2}
+.foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+.foot-brand{font-family:var(--font-display);font-size:64px;letter-spacing:.03em;line-height:1}
+.foot-col h4{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:18px;font-family:var(--font-mono);font-weight:500}
+.foot-col a{display:block;font-size:14px;color:var(--muted);padding:5px 0;transition:color .2s}
+.foot-col a:hover{color:var(--accent)}
+.foot-bottom{margin-top:60px;padding-top:26px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--faint)}
+
+/* ============ MODALS ============ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+  z-index:120;display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal{
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:22px;
+  width:100%;max-width:430px;max-height:82vh;display:flex;flex-direction:column;
+  transform:translateY(24px) scale(.97);transition:transform .35s cubic-bezier(.22,1,.36,1);
+  box-shadow:var(--shadow);
+}
+.modal-overlay.open .modal{transform:none}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:22px 24px 16px}
+.modal-head h3{font-size:17px;font-weight:700}
+.modal-body{padding:0 12px 16px;overflow-y:auto}
+.modal-search{
+  margin:0 12px 12px;width:calc(100% - 24px);background:var(--input);border:1px solid var(--border);
+  border-radius:13px;padding:13px 16px;font-size:14px;outline:none;
+}
+.modal-search:focus{border-color:var(--accent)}
+.tk-row{
+  display:flex;align-items:center;gap:13px;width:100%;padding:12px;border-radius:14px;
+  transition:background .2s;text-align:left;
+}
+.tk-row:hover{background:var(--hover)}
+.tk-row .tk-name{font-weight:700;font-size:15px}
+.tk-row .tk-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.tk-row .tk-bal{margin-left:auto;font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.tk-sect{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);padding:14px 14px 6px;font-family:var(--font-mono)}
+.wallet-opt{
+  display:flex;align-items:center;gap:15px;width:100%;padding:16px;border-radius:16px;
+  border:1px solid var(--border);margin-bottom:10px;transition:border-color .25s,background .25s;text-align:left;
+}
+.wallet-opt:hover{border-color:var(--accent);background:var(--hover)}
+.wallet-opt .w-ico{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0}
+.wallet-opt .w-name{font-weight:700;font-size:15px}
+.wallet-opt .w-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.slip-opts{display:flex;gap:8px;margin-top:8px}
+.slip-opt{
+  flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);
+  font-family:var(--font-mono);font-size:13px;font-weight:600;transition:all .25s;
+}
+.slip-opt.active{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+/* success modal */
+.success-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 24px 30px}
+.success-ring{
+  width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(47,212,126,.14);margin-bottom:20px;animation:pop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.success-ring svg{width:34px;height:34px;stroke:var(--ok)}
+.success-hero h3{font-size:20px;font-weight:700}
+.success-hero .s-sub{color:var(--muted);font-size:13.5px;margin-top:8px;line-height:1.6}
+.success-hero .hash{
+  font-family:var(--font-mono);font-size:11.5px;background:var(--surface-2);
+  padding:9px 14px;border-radius:10px;margin-top:18px;color:var(--accent);word-break:break-all;
+}
+
+/* ============ TOASTS ============ */
+#toasts{position:fixed;bottom:26px;right:26px;z-index:160;display:flex;flex-direction:column;gap:10px}
+.toast{
+  background:var(--surface);border:1px solid var(--border-strong);border-left:3px solid var(--accent);
+  border-radius:14px;padding:15px 20px;font-size:13.5px;font-weight:500;min-width:280px;
+  box-shadow:var(--shadow);animation:toastin .4s cubic-bezier(.22,1,.36,1);
+  display:flex;align-items:center;gap:10px;
+}
+.toast.ok{border-left-color:var(--ok)}
+.toast.err{border-left-color:var(--err)}
+@keyframes toastin{from{transform:translateX(120%);opacity:0}to{transform:none;opacity:1}}
+.toast.out{transition:all .4s;transform:translateX(120%);opacity:0}
+
+/* reveal helpers */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- PRELOADER -->
+<div id="preloader">
+  <div class="pl-word">CROSSTRADE</div>
+  <div class="col"></div><div class="col"></div><div class="col"></div><div class="col"></div>
+  <div class="col"></div><div class="col"></div><div class="col"></div><div class="col"></div>
+  <div class="col"></div><div class="col"></div><div class="col"></div><div class="col"></div>
+</div>
+
+<div class="cursor"><div class="dot"></div></div>
+<div class="grid-overlay"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <svg viewBox="0 0 32 32" fill="none"><path d="M4 22 L16 4 L28 22" stroke="url(#lg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 28 L22 10" stroke="#CA9FFF" stroke-width="3.4" stroke-linecap="round" opacity=".85"/><defs><linearGradient id="lg" x1="4" y1="4" x2="28" y2="28"><stop stop-color="#6a48f2"/><stop offset="1" stop-color="#fc9fdf"/></linearGradient></defs></svg>
+    CrossTrade
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="#app" data-split>Swap</a>
+    <a class="nav-link" href="#app" data-split>On/Off-Ramp</a>
+    <a class="nav-link" href="#features" data-split>Why Stellar</a>
+    <a class="nav-link" href="#how" data-split>How it works</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <span class="thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></svg>
+      </span>
+    </button>
+    <button class="btn-connect" id="connectBtn">Connect Wallet</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <canvas id="shader"></canvas>
+  <div class="hero-inner">
+    <div class="hero-badge"><span class="pulse"></span> Live on Stellar Mainnet</div>
+    <h1>
+      <span class="line"><span>Trade across</span></span>
+      <span class="line"><span class="stroke">crypto &amp; fiat</span></span>
+      <span class="line"><span>in <span class="grad-text">one swap</span></span></span>
+    </h1>
+    <p class="hero-sub">
+      CrossTrade is a decentralized exchange built on <b>Stellar</b> — swap any asset for any currency,
+      on-ramp from your bank in seconds, and settle anywhere on Earth for a fraction of a cent.
+    </p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="#app">Launch App
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a class="btn-ghost" href="#features">Explore the protocol</a>
+    </div>
+  </div>
+  <div class="hero-scroll"><span>Scroll</span><span class="bar"></span></div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<!-- APP -->
+<section id="app">
+  <div class="container">
+    <div class="app-head reveal">
+      <div>
+        <div class="eyebrow">The Exchange</div>
+        <h2 class="h2">Swap anything.<br>Settle everywhere.</h2>
+      </div>
+      <p>Crypto-to-crypto, fiat-to-crypto, and fiat-to-fiat path payments route through Stellar's
+      built-in DEX in a single atomic transaction. Best price, every path, ~5 second finality.</p>
+    </div>
+
+    <div class="dex">
+      <!-- SWAP CARD -->
+      <div class="swap-card reveal" id="swapCard">
+        <div class="swap-tabs">
+          <button class="swap-tab active" data-tab="swap">Swap</button>
+          <button class="swap-tab" data-tab="buy">Buy</button>
+          <button class="swap-tab" data-tab="sell">Sell</button>
+        </div>
+
+        <div class="swap-head">
+          <span class="lbl" id="modeLabel">Cross-asset swap</span>
+          <button class="icon-btn" id="settingsBtn" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+
+        <!-- FROM -->
+        <div class="token-box" id="boxFrom">
+          <div class="row">
+            <input type="text" inputmode="decimal" id="amountIn" placeholder="0.0" autocomplete="off">
+            <button class="token-btn" id="btnFrom">
+              <span class="tk-icon" id="iconFrom"></span>
+              <span id="symFrom">XLM</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="sub">
+            <span id="usdIn">≈ $0.00</span>
+            <span class="bal" id="balFrom">Balance: —</span>
+          </div>
+        </div>
+
+        <div class="flip-wrap">
+          <button class="flip-btn" id="flipBtn" title="Flip">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+          </button>
+        </div>
+
+        <!-- TO -->
+        <div class="token-box" id="boxTo">
+          <div class="row">
+            <input type="text" id="amountOut" placeholder="0.0" readonly>
+            <button class="token-btn" id="btnTo">
+              <span class="tk-icon" id="iconTo"></span>
+              <span id="symTo">USDC</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="sub">
+            <span id="usdOut">≈ $0.00</span>
+            <span id="rateLine">—</span>
+          </div>
+        </div>
+
+        <!-- ramp-only fields -->
+        <div class="ramp-fields" id="rampFields" style="display:none">
+          <div id="payMethodWrap">
+            <label>Payment method</label>
+            <div class="pay-methods">
+              <button class="pay-method active" data-pm="card">
+                <div class="pm-name">Debit / Credit Card</div>
+                <div class="pm-fee">1.8% · instant</div>
+              </button>
+              <button class="pay-method" data-pm="bank">
+                <div class="pm-name">Bank Transfer</div>
+                <div class="pm-fee">0.5% · ~1 day</div>
+              </button>
+              <button class="pay-method" data-pm="paypal">
+                <div class="pm-name">PayPal</div>
+                <div class="pm-fee">2.5% · instant</div>
+              </button>
+              <button class="pay-method" data-pm="valr">
+                <div class="pm-name">VALR</div>
+                <div class="pm-fee">1.0% · instant</div>
+              </button>
+              <button class="pay-method" data-pm="revolut">
+                <div class="pm-name">Revolut</div>
+                <div class="pm-fee">0.9% · instant</div>
+              </button>
+              <button class="pay-method" data-pm="momo">
+                <div class="pm-name">MoMo · Mobile Money</div>
+                <div class="pm-fee">1.2% · instant</div>
+              </button>
+            </div>
+          </div>
+          <div id="bankDestWrap" style="display:none">
+            <label>Recipient details — where your fiat lands</label>
+            <input class="field" id="sellName" placeholder="Recipient full name" autocomplete="off">
+            <div class="field-pair">
+              <input class="field" id="sellAcct" placeholder="Account number / IBAN" autocomplete="off">
+              <input class="field" id="sellBank" placeholder="Bank name" autocomplete="off">
+            </div>
+          </div>
+          <div id="fiatFiatWrap" style="display:none">
+            <label>Deposit to — CrossTrade settlement account</label>
+            <div class="admin-acct" id="adminAcct"></div>
+            <label>Recipient details — where the converted currency lands</label>
+            <input class="field" id="ffName" placeholder="Recipient full name" autocomplete="off">
+            <div class="field-pair">
+              <input class="field" id="ffAcct" placeholder="Account number / IBAN" autocomplete="off">
+              <input class="field" id="ffBank" placeholder="Bank name" autocomplete="off">
+            </div>
+          </div>
+        </div>
+
+        <div class="quote-meta" id="quoteMeta" style="display:none">
+          <div class="qm-row"><span>Rate</span><span id="qmRate">—</span></div>
+          <div class="qm-row"><span>Network fee</span><span id="qmFee">0.00001 XLM</span></div>
+          <div class="qm-row"><span>Price impact</span><span id="qmImpact">—</span></div>
+          <div class="qm-row"><span>Minimum received</span><span id="qmMin">—</span></div>
+          <div class="qm-row"><span>Route</span><span class="route" id="qmRoute">—</span></div>
+        </div>
+
+        <button class="swap-submit" id="submitBtn" disabled>Connect wallet to trade</button>
+      </div>
+
+      <!-- SIDE PANELS -->
+      <div class="dex-side reveal">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Top Markets</h3>
+            <span class="tag">Stellar DEX · live</span>
+          </div>
+          <div id="pairsList"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Your Activity</h3>
+            <span class="tag" id="actCount">0 txns</span>
+          </div>
+          <div id="activityList"><div class="empty-state">No transactions yet.<br>Connect a wallet and make your first cross-asset swap.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container feat-grid">
+    <div class="feat-sticky reveal">
+      <div class="eyebrow">Why Stellar</div>
+      <h2 class="h2">Built for<br>moving value</h2>
+      <p>Most chains bolt payments on as an afterthought. Stellar was designed from day one
+      for one thing: moving any asset, anywhere, for almost nothing. CrossTrade sits directly
+      on top of that rails-first architecture.</p>
+    </div>
+    <div class="feat-cards">
+      <div class="feat-card reveal">
+        <div class="f-num">01 / PATH PAYMENTS</div>
+        <h3>Crypto ↔ fiat in a single hop</h3>
+        <p>Send USDC, deliver Nigerian naira. Send euros, receive XLM. Stellar's path payment
+        engine finds the cheapest route through the order books — the conversion happens inside
+        one atomic transaction, never two.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="f-num">02 / FINALITY</div>
+        <h3>~5 second settlement, forever</h3>
+        <p>No mempool, no miners, no reorgs. Stellar Consensus Protocol closes a ledger every
+        five seconds with absolute finality — what you see confirmed is irreversible.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="f-num">03 / COST</div>
+        <h3>Fees measured in fractions of a cent</h3>
+        <p>A swap costs 0.00001 XLM in network fees — roughly a hundred-thousandth of a dollar.
+        Cross-border no longer means cross-purpose pricing.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="f-num">04 / ANCHORS</div>
+        <h3>Regulated fiat on &amp; off-ramps</h3>
+        <p>Licensed anchors issue fiat-backed tokens 1:1 and redeem them straight to your bank
+        account. On-ramp with a card, off-ramp to an IBAN — all without leaving the app.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="f-num">05 / SELF-CUSTODY</div>
+        <h3>Your keys, your assets</h3>
+        <p>CrossTrade never holds your funds. Trades sign locally in your wallet — Freighter,
+        LOBSTR, or xBull — and settle straight to your own Stellar address.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="stats">
+  <div class="container">
+    <div class="reveal">
+      <div class="eyebrow">Protocol in numbers</div>
+      <h2 class="h2">Small fees.<br>Serious volume.</h2>
+    </div>
+    <div class="stats-grid reveal">
+      <div class="stat"><div class="s-val"><span class="count" data-count="5" data-suffix="s">0</span></div><div class="s-lbl">Ledger close time</div></div>
+      <div class="stat"><div class="s-val">$<span class="count" data-count="0.00032" data-decimals="5">0</span></div><div class="s-lbl">Avg. network fee per swap</div></div>
+      <div class="stat"><div class="s-val"><span class="count" data-count="180" data-suffix="+">0</span></div><div class="s-lbl">Countries with anchor coverage</div></div>
+      <div class="stat"><div class="s-val"><span class="count" data-count="9.2" data-decimals="1" data-suffix=" yrs">0</span></div><div class="s-lbl">Of uninterrupted uptime</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section id="how">
+  <div class="container">
+    <div class="reveal">
+      <div class="eyebrow">How it works</div>
+      <h2 class="h2">Three steps to<br>your first swap</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="n">01</div>
+        <h3>Connect a wallet</h3>
+        <p>Freighter, LOBSTR, or xBull — any Stellar wallet works. No email, no sign-up, no custody. Your address is your account.</p>
+      </div>
+      <div class="step reveal">
+        <div class="n">02</div>
+        <h3>Pick any two assets</h3>
+        <p>XLM to USDC, dollars to Bitcoin, euros to pesos. CrossTrade routes through the Stellar DEX to find you the best path and price.</p>
+      </div>
+      <div class="step reveal">
+        <div class="n">03</div>
+        <h3>Sign and settle</h3>
+        <p>One signature, one atomic transaction, ~5 seconds. Fiat lands in your bank; crypto lands in your wallet. Done.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">CrossTrade</div>
+        <p style="color:var(--muted);font-size:13.5px;margin-top:14px;max-width:280px;line-height:1.7">
+          Cross-border swaps on the Stellar network.<br>Crypto, fiat, and everything between.</p>
+      </div>
+      <div class="foot-col">
+        <h4>App</h4>
+        <a href="#app">Swap</a><a href="#app">Buy crypto</a><a href="#app">Sell to bank</a>
+      </div>
+      <div class="foot-col">
+        <h4>Protocol</h4>
+        <a href="#features">Why Stellar</a><a href="#how">How it works</a><a href="#stats">Statistics</a>
+        <a href="admin.html" style="color:var(--accent)">Admin console →</a>
+      </div>
+      <div class="foot-col">
+        <h4>Network</h4>
+        <a href="https://stellar.org" target="_blank" rel="noopener">Stellar</a>
+        <a href="https://stellar.expert" target="_blank" rel="noopener">Ledger explorer</a>
+        <a href="https://developers.stellar.org" target="_blank" rel="noopener">Developers</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 CrossTrade — interface demo. Simulated environment; no real funds move.</span>
+      <span class="mono">Ledger #58,412,907 · Soroban-ready</span>
+    </div>
+  </div>
+</footer>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="walletModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Connect wallet</h3>
+      <button class="icon-btn" data-close><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <button class="wallet-opt" data-wallet="Freighter">
+        <span class="w-ico" style="background:linear-gradient(135deg,#6a48f2,#a86fff)">F</span>
+        <span><div class="w-name">Freighter</div><div class="w-sub">Browser extension · most popular</div></span>
+      </button>
+      <button class="wallet-opt" data-wallet="LOBSTR">
+        <span class="w-ico" style="background:linear-gradient(135deg,#2fd47e,#7be8b0)">L</span>
+        <span><div class="w-name">LOBSTR</div><div class="w-sub">Mobile &amp; web wallet</div></span>
+      </button>
+      <button class="wallet-opt" data-wallet="xBull">
+        <span class="w-ico" style="background:linear-gradient(135deg,#ff8c42,#fc9fdf)">X</span>
+        <span><div class="w-name">xBull</div><div class="w-sub">Advanced signer · Soroban</div></span>
+      </button>
+      <p style="padding:8px 8px 4px;font-size:11.5px;color:var(--faint);line-height:1.6">
+        Demo mode: connecting simulates a funded test wallet with local balances. Keys never leave your device.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tokenModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="tokenModalTitle">Select asset</h3>
+      <button class="icon-btn" data-close><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <input class="modal-search" id="tokenSearch" placeholder="Search name or symbol" autocomplete="off">
+    <div class="modal-body" id="tokenList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Transaction settings</h3>
+      <button class="icon-btn" data-close><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="modal-body" style="padding:0 24px 24px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">Max slippage</label>
+      <div class="slip-opts">
+        <button class="slip-opt" data-slip="0.1">0.1%</button>
+        <button class="slip-opt active" data-slip="0.5">0.5%</button>
+        <button class="slip-opt" data-slip="1">1.0%</button>
+      </div>
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:22px 0 8px">Route preference</label>
+      <div class="slip-opts" style="margin:0">
+        <button class="slip-opt active" data-route="best">Best price</button>
+        <button class="slip-opt" data-route="direct">Direct path only</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="success-hero">
+      <div class="success-ring">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.6" stroke-linecap="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg>
+      </div>
+      <h3 id="succTitle">Swap submitted</h3>
+      <p class="s-sub" id="succSub"></p>
+      <div class="hash" id="succHash"></div>
+      <button class="btn-primary" style="margin-top:22px" data-close>Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ================================================================
+   CrossTrade — simulated Stellar DEX interface
+   All quotes, balances and transactions are simulated locally.
+================================================================ */
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ---------- PRELOADER ---------- */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const pl = $('#preloader');
+    pl.classList.add('done');
+    $$('#preloader .col').forEach((c, i) => c.style.transitionDelay = (i * 0.035) + 's');
+    setTimeout(() => pl.classList.add('gone'), 1000);
+    // hero line reveal
+    $$('.hero h1 .line > span').forEach((s, i) => {
+      s.style.transition = 'transform 1.1s cubic-bezier(.22,1,.36,1) ' + (0.15 + i * 0.12) + 's';
+      s.style.transform = 'translateY(0)';
+    });
+  }, 900);
+});
+
+/* ---------- CUSTOM CURSOR ---------- */
+const cursor = $('.cursor'), dot = $('.cursor .dot');
+let cx = innerWidth/2, cy = innerHeight/2, tx = cx, ty = cy;
+addEventListener('mousemove', e => { tx = e.clientX; ty = e.clientY; });
+(function loopCursor(){
+  cx += (tx - cx) * 0.22; cy += (ty - cy) * 0.22;
+  dot.style.left = cx + 'px'; dot.style.top = cy + 'px';
+  requestAnimationFrame(loopCursor);
+})();
+document.addEventListener('mouseover', e => {
+  cursor.classList.toggle('big', !!e.target.closest('a,button,input,.pair-row'));
+});
+
+/* ---------- THEME ---------- */
+const root = document.documentElement;
+const savedTheme = localStorage.getItem('ct-theme');
+if (savedTheme) root.dataset.theme = savedTheme;
+$('#themeToggle').addEventListener('click', () => {
+  root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ct-theme', root.dataset.theme);
+  shaderThemeDirty = true;
+});
+
+/* ---------- NAV CHAR SPLIT ---------- */
+$$('[data-split]').forEach(link => {
+  const text = link.textContent;
+  link.textContent = '';
+  [...text].forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.className = 'char';
+    s.dataset.char = ch;
+    s.textContent = ch;
+    s.style.transitionDelay = (i * 0.022) + 's';
+    link.appendChild(s);
+  });
+});
+
+/* ---------- HERO SHADER (procedural gradient, WebGL) ---------- */
+let shaderThemeDirty = true;
+(function initShader(){
+  const canvas = $('#shader');
+  const gl = canvas.getContext('webgl', {antialias:false});
+  const DARK = {c0:[0.10,0.05,0.24], c1:[0.42,0.28,0.90], c2:[0.98,0.62,0.87], base:[0,0,0]};
+  const LIGHT= {c0:[0.702,0.753,0.996], c1:[0.929,0.941,1.0], c2:[0.855,0.969,1.0], base:[1,1,1]};
+  if (!gl) { canvas.style.background = 'radial-gradient(60% 60% at 50% 40%, rgba(106,72,242,.25), transparent)'; return; }
+  const vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+  const fs = `precision mediump float;
+    uniform vec2 r;uniform float t;uniform vec3 c0,c1,c2,base;
+    vec2 pcg2d(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return fract(sin(p)*43758.5453)*2.-1.;}
+    float n2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+      float a=dot(pcg2d(i),f),b=dot(pcg2d(i+vec2(1,0)),f-vec2(1,0)),
+            c=dot(pcg2d(i+vec2(0,1)),f-vec2(0,1)),d=dot(pcg2d(i+vec2(1,1)),f-vec2(1,1));
+      return mix(mix(a,b,f.x),mix(c,d,f.x),f.y)*.5+.5;}
+    void main(){
+      vec2 uv=gl_FragCoord.xy/r; vec2 p=uv*vec2(r.x/r.y,1.)*1.6;
+      float n=n2(p+vec2(t*.06,-t*.04))*.6+n2(p*2.3-vec2(t*.03,t*.05))*.4;
+      float m=smoothstep(.07,.95,uv.y*.65+n*.55);
+      vec3 col=mix(c0,c1,smoothstep(.07,.65,m));
+      col=mix(col,c2,smoothstep(.65,1.,m));
+      col=mix(base,col,smoothstep(1.15,.25,uv.y+.25*n));
+      float vig=1.-.35*length(uv-.5);
+      gl_FragColor=vec4(col*vig,1.);
+    }`;
+  function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const uR = gl.getUniformLocation(prog,'r'), uT = gl.getUniformLocation(prog,'t'),
+        uC0 = gl.getUniformLocation(prog,'c0'), uC1 = gl.getUniformLocation(prog,'c1'),
+        uC2 = gl.getUniformLocation(prog,'c2'), uB = gl.getUniformLocation(prog,'base');
+  let cur = null;
+  function resize(){
+    const dpr = Math.min(devicePixelRatio, 1.6);
+    canvas.width = canvas.clientWidth * dpr; canvas.height = canvas.clientHeight * dpr;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  addEventListener('resize', resize); resize();
+  (function frame(ts){
+    if (shaderThemeDirty || !cur) {
+      cur = root.dataset.theme === 'dark' ? DARK : LIGHT;
+      shaderThemeDirty = false;
+    }
+    gl.uniform2f(uR, canvas.width, canvas.height);
+    gl.uniform1f(uT, ts * 0.001 * 0.25);
+    gl.uniform3fv(uC0, cur.c0); gl.uniform3fv(uC1, cur.c1);
+    gl.uniform3fv(uC2, cur.c2); gl.uniform3fv(uB, cur.base);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  })(0);
+})();
+
+/* ---------- SCROLL REVEALS + COUNTERS ---------- */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('in');
+    e.target.querySelectorAll('.count').forEach(runCounter);
+    io.unobserve(e.target);
+  });
+}, {threshold: .18});
+$$('.reveal').forEach(el => io.observe(el));
+function runCounter(el){
+  if (el.dataset.done) return; el.dataset.done = 1;
+  const target = parseFloat(el.dataset.count), dec = +(el.dataset.decimals || 0), suf = el.dataset.suffix || '';
+  const t0 = performance.now(), dur = 2000;
+  (function tick(now){
+    const p = Math.min((now - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+    const parts = (target * e).toFixed(dec).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    el.textContent = parts.join('.') + suf;
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+}
+
+/* ---------- MARKET DATA (simulated, random-walk) ---------- */
+const ASSETS = {
+  XLM:  {name:'Stellar Lumens', px:0.1187, color:'#7C5CFF', kind:'crypto', chg:2.41},
+  USDC: {name:'USD Coin',       px:1.00,   color:'#2f7de1', kind:'crypto', chg:0.01},
+  AQUA: {name:'Aquarius',       px:0.0011, color:'#38c6d9', kind:'crypto', chg:-1.24},
+  yXLM: {name:'Ultra Stellar',  px:0.1325, color:'#a86fff', kind:'crypto', chg:3.08},
+  BTC:  {name:'Bitcoin (wrapped)', px:67230, color:'#f7931a', kind:'crypto', chg:1.12},
+  ETH:  {name:'Ethereum (wrapped)',px:3512,  color:'#8aa4f8', kind:'crypto', chg:-0.64},
+  USDT: {name:'Tether USD',       px:1.00,   color:'#26a17b', kind:'crypto', chg:-0.02},
+  XRP:  {name:'Ripple (wrapped)', px:0.62,   color:'#25a4e8', kind:'crypto', chg:1.87},
+  BNB:  {name:'BNB (wrapped)',    px:615,    color:'#f0b90b', kind:'crypto', chg:0.74},
+  USD:  {name:'US Dollar · fiat', px:1.00,  color:'#2fd47e', kind:'fiat', flag:'🇺🇸'},
+  EUR:  {name:'Euro · fiat',      px:1.08,  color:'#4a6cf7', kind:'fiat', flag:'🇪🇺'},
+  GBP:  {name:'British Pound · fiat', px:1.27, color:'#c65df0', kind:'fiat', flag:'🇬🇧'},
+  NGN:  {name:'Nigerian Naira · fiat', px:0.00066, color:'#1fa35c', kind:'fiat', flag:'🇳🇬'},
+  ZAR:  {name:'South African Rand · fiat', px:0.055, color:'#0fa958', kind:'fiat', flag:'🇿🇦'},
+  KES:  {name:'Kenyan Shilling · fiat', px:0.0077, color:'#c0392b', kind:'fiat', flag:'🇰🇪'},
+  GHS:  {name:'Ghanaian Cedi · fiat', px:0.066, color:'#e67e22', kind:'fiat', flag:'🇬🇭'},
+  MWK:  {name:'Malawian Kwacha · fiat', px:0.00058, color:'#8e6bbf', kind:'fiat', flag:'🇲🇼'},
+  MZN:  {name:'Mozambican Metical · fiat', px:0.0156, color:'#16a085', kind:'fiat', flag:'🇲🇿'},
+  BRL:  {name:'Brazilian Real · fiat', px:0.19, color:'#f0b429', kind:'fiat', flag:'🇧🇷'},
+  PHP:  {name:'Philippine Peso · fiat', px:0.017, color:'#e15a97', kind:'fiat', flag:'🇵🇭'},
+};
+const FIAT_SYMS = Object.keys(ASSETS).filter(k => ASSETS[k].kind === 'fiat');
+const CRYPTO_SYMS = Object.keys(ASSETS).filter(k => ASSETS[k].kind === 'crypto');
+
+/* Platform settlement accounts — set by the CrossTrade admin desk per currency */
+const ADMIN_ACCOUNTS = {
+  USD:{bank:'Mercury Bank · CrossTrade Settlement LLC', name:'CrossTrade Escrow — USD', acct:'US12 3456 7890 1234 5678 90', rail:'Wire / ACH'},
+  EUR:{bank:'CrossTrade Europe BV', name:'CrossTrade Escrow — EUR', acct:'DE89 3704 0044 0532 0130 00', rail:'SEPA'},
+  GBP:{bank:'CrossTrade UK Ltd', name:'CrossTrade Escrow — GBP', acct:'GB29 NWBK 6016 1331 9268 19', rail:'Faster Payments'},
+  NGN:{bank:'CrossTrade NG · Kuda Microfinance', name:'CrossTrade Escrow — NGN', acct:'2001 3344 55', rail:'NIP transfer'},
+  ZAR:{bank:'CrossTrade ZA · Standard Bank', name:'CrossTrade Escrow — ZAR', acct:'ZA45 0800 1234 5678 9012 34', rail:'EFT / PayShap'},
+  KES:{bank:'CrossTrade KE · Equity Bank', name:'CrossTrade Escrow — KES', acct:'0470 1234 5678', rail:'PesaLink / M-Pesa'},
+  GHS:{bank:'CrossTrade GH · Stanbic Ghana', name:'CrossTrade Escrow — GHS', acct:'9040 0055 6677', rail:'GhIPSS instant'},
+  MWK:{bank:'CrossTrade MW · National Bank of Malawi', name:'CrossTrade Escrow — MWK', acct:'1002 3344 5566', rail:'EFT'},
+  MZN:{bank:'CrossTrade MZ · BCI Moçambique', name:'CrossTrade Escrow — MZN', acct:'1188 4455 6677 001', rail:'SIMO / EFT'},
+  BRL:{bank:'CrossTrade BR · Banco Inter', name:'CrossTrade Escrow — BRL', acct:'BR97 0036 0305 0001 0000 9795 493P 1', rail:'Pix'},
+  PHP:{bank:'CrossTrade PH · BDO Unibank', name:'CrossTrade Escrow — PHP', acct:'0011 2233 4455', rail:'InstaPay'},
+};
+/* Buy-side payment methods and their ramp fees */
+const PAY_METHODS = {
+  card:   {label:'Debit / Credit Card',    fee:0.018, speed:'instant'},
+  bank:   {label:'Bank Transfer',          fee:0.005, speed:'~1 day'},
+  paypal: {label:'PayPal',                 fee:0.025, speed:'instant'},
+  valr:   {label:'VALR',                   fee:0.010, speed:'instant'},
+  revolut:{label:'Revolut',                fee:0.009, speed:'instant'},
+  momo:   {label:'MoMo · Mobile Money',    fee:0.012, speed:'instant'},
+};
+/* Platform fee knobs — overridable from the admin console */
+const FEES = {corridor: 0.01, sell: 0.008, pool: 0.003};
+/* Admin console overrides (accounts / wallets / fees / rates) */
+try {
+  const ovAcc = JSON.parse(localStorage.getItem('ct-admin-accounts') || 'null');
+  if (ovAcc) Object.keys(ovAcc).forEach(k => { if (ADMIN_ACCOUNTS[k]) ADMIN_ACCOUNTS[k] = {...ADMIN_ACCOUNTS[k], ...ovAcc[k]}; });
+  const ovFee = JSON.parse(localStorage.getItem('ct-admin-fees') || 'null');
+  if (ovFee){
+    if (ovFee.corridor != null) FEES.corridor = ovFee.corridor / 100;
+    if (ovFee.sell != null) FEES.sell = ovFee.sell / 100;
+    if (ovFee.pool != null) FEES.pool = ovFee.pool / 100;
+    if (ovFee.methods) Object.keys(ovFee.methods).forEach(k => { if (PAY_METHODS[k]) PAY_METHODS[k].fee = ovFee.methods[k] / 100; });
+  }
+  const ovRates = JSON.parse(localStorage.getItem('ct-admin-rates') || 'null');
+  if (ovRates) Object.keys(ovRates).forEach(k => { if (ASSETS[k]) ASSETS[k].px = ovRates[k]; });
+} catch(e){}
+function jitter(){
+  CRYPTO_SYMS.forEach(s => {
+    if (s === 'USDC' || s === 'USDT') return;
+    ASSETS[s].px *= 1 + (Math.random() - 0.5) * 0.004;
+    ASSETS[s].chg += (Math.random() - 0.5) * 0.15;
+  });
+}
+setInterval(() => { jitter(); renderTicker(); renderPairs(); quote(); }, 4000);
+
+/* ticker */
+function tickHTML(sym){
+  const a = ASSETS[sym], up = a.chg >= 0;
+  return `<div class="tick">
+    <span class="ticon" style="background:${a.color}">${sym.slice(0,2)}</span>
+    <span class="sym">${sym}</span>
+    <span class="px mono">$${fmtPx(a.px)}</span>
+    <span class="chg ${up?'up':'dn'}">${up?'▲':'▼'} ${Math.abs(a.chg).toFixed(2)}%</span>
+  </div>`;
+}
+function renderTicker(){
+  const list = CRYPTO_SYMS.map(tickHTML).join('');
+  $('#tickerTrack').innerHTML = list + list;
+}
+function fmtPx(p){
+  if (p >= 1000) return p.toLocaleString('en-US', {maximumFractionDigits: 0});
+  if (p >= 1) return p.toFixed(3);
+  if (p >= 0.01) return p.toFixed(4);
+  return p.toPrecision(3);
+}
+renderTicker();
+
+/* pairs panel with sparklines */
+const sparkHist = {};
+CRYPTO_SYMS.forEach(s => sparkHist[s] = Array.from({length:24}, () => ASSETS[s].px * (1 + (Math.random()-.5)*0.02)));
+function sparkSVG(sym){
+  const h = sparkHist[sym], a = ASSETS[sym];
+  h.push(a.px); if (h.length > 24) h.shift();
+  const min = Math.min(...h), max = Math.max(...h), rng = max - min || 1;
+  const pts = h.map((v,i) => `${(i/(h.length-1))*72},${24 - ((v-min)/rng)*22}`).join(' ');
+  const col = a.chg >= 0 ? 'var(--ok)' : 'var(--err)';
+  return `<svg class="spark" viewBox="0 0 72 26"><path d="M${pts}" stroke="${col}"/></svg>`;
+}
+function renderPairs(){
+  $('#pairsList').innerHTML = CRYPTO_SYMS.map(sym => {
+    const a = ASSETS[sym], up = a.chg >= 0;
+    return `<div class="pair-row" data-pair="${sym}">
+      <span class="tk-icon" style="background:${a.color}">${sym.slice(0,2)}</span>
+      <span><div class="p-name">${sym}<span style="color:var(--faint);font-weight:500"> / USD</span></div>
+      <div class="p-sub">${a.name}</div></span>
+      ${sparkSVG(sym)}
+      <span><div class="p-px">$${fmtPx(a.px)}</div>
+      <div class="p-chg ${up?'up':'dn'}" style="color:${up?'var(--ok)':'var(--err)'}">${up?'+':''}${a.chg.toFixed(2)}%</div></span>
+    </div>`;
+  }).join('');
+}
+renderPairs();
+$('#pairsList').addEventListener('click', e => {
+  const row = e.target.closest('.pair-row');
+  if (!row) return;
+  state.from = row.dataset.pair; state.to = 'USDC';
+  syncTokenUI(); quote();
+  $('#swapCard').scrollIntoView({behavior:'smooth', block:'center'});
+});
+</script>
+
+<script>
+/* ---------- STATE ---------- */
+const state = {
+  mode: 'swap',            // swap | buy | sell
+  from: 'XLM', to: 'USDC',
+  slippage: 0.5, routePref: 'best',
+  payMethod: 'card',
+  wallet: null, address: null,
+  balances: {},
+  activity: JSON.parse(localStorage.getItem('ct-activity') || '[]'),
+  tokenPickSide: 'from',
+};
+
+/* ---------- HELPERS ---------- */
+function fmtAmt(n, sym){
+  if (!isFinite(n)) return '0.0';
+  const p = ASSETS[sym] ? ASSETS[sym].px : 1;
+  let d = p >= 1000 ? 8 : p >= 1 ? 4 : p >= 0.01 ? 5 : 2;
+  if (ASSETS[sym] && ASSETS[sym].kind === 'fiat') d = 2;
+  const v = n.toFixed(d).replace(/\.?0+$/, '');
+  return v === '' ? '0' : (+n >= 1e9 ? n.toExponential(3) : (+v).toLocaleString('en-US', {maximumFractionDigits: d}));
+}
+function fmtUSD(n){ return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function iconHTML(sym){
+  const a = ASSETS[sym];
+  if (a.kind === 'fiat') return `<span class="tk-icon fiat" style="background:${a.color}">${a.flag}</span>`;
+  return `<span class="tk-icon" style="background:${a.color}">${sym.slice(0,2)}</span>`;
+}
+function toast(msg, cls=''){
+  const t = document.createElement('div');
+  t.className = 'toast ' + cls; t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 450); }, 3400);
+}
+function openModal(id){ $(id).classList.add('open'); }
+function closeModals(){ $$('.modal-overlay').forEach(m => m.classList.remove('open')); }
+$$('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) closeModals(); }));
+addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+
+/* ---------- TOKEN ICONS IN SWAP CARD ---------- */
+function syncTokenUI(){
+  $('#iconFrom').outerHTML = iconHTML(state.from).replace('<span class="tk-icon', '<span id="iconFrom" class="tk-icon');
+  $('#iconTo').outerHTML = iconHTML(state.to).replace('<span class="tk-icon', '<span id="iconTo" class="tk-icon');
+  $('#symFrom').textContent = state.from;
+  $('#symTo').textContent = state.to;
+  const bal = state.wallet ? (state.balances[state.from] || 0) : null;
+  $('#balFrom').textContent = state.wallet ? `Balance: ${fmtAmt(bal, state.from)} ${state.from}` : 'Balance: —';
+}
+
+/* ---------- QUOTE ENGINE ---------- */
+function getRate(from, to){
+  // USD value ratio via Stellar DEX path
+  return ASSETS[from].px / ASSETS[to].px;
+}
+function quote(){
+  const raw = $('#amountIn').value.replace(/,/g, '');
+  const amt = parseFloat(raw);
+  const out = $('#amountOut');
+  const meta = $('#quoteMeta');
+  if (!raw || !isFinite(amt) || amt <= 0){
+    out.value = ''; meta.style.display = 'none';
+    $('#usdIn').textContent = '≈ $0.00'; $('#usdOut').textContent = '≈ $0.00';
+    $('#rateLine').textContent = '—';
+    updateSubmit(0);
+    return;
+  }
+  const rate = getRate(state.from, state.to);
+  const inUsd = amt * ASSETS[state.from].px;
+  const impact = Math.min(0.02 + inUsd / 800000, 0.18);          // depth-based impact
+  const dexFee = FEES.pool;
+  let rampFee = 0;
+  if (state.mode === 'buy')  rampFee = PAY_METHODS[state.payMethod].fee;
+  if (state.mode === 'sell') rampFee = FEES.sell;
+  if (isFiatFiat())          rampFee = FEES.corridor;
+  const gross = amt * rate;
+  const outAmt = gross * (1 - dexFee) * (1 - impact) * (1 - rampFee);
+  const minRec = outAmt * (1 - state.slippage / 100);
+  out.value = fmtAmt(outAmt, state.to);
+  $('#usdIn').textContent = '≈ ' + fmtUSD(inUsd);
+  $('#usdOut').textContent = '≈ ' + fmtUSD(outAmt * ASSETS[state.to].px);
+  $('#rateLine').textContent = `1 ${state.from} ≈ ${fmtAmt(rate, state.to)} ${state.to}`;
+  meta.style.display = 'block';
+  $('#qmRate').textContent = `1 ${state.from} ≈ ${fmtAmt(rate, state.to)} ${state.to}`;
+  $('#qmFee').textContent = rampFee
+    ? `0.00001 XLM + ${(rampFee*100).toFixed(1)}% ${isFiatFiat() ? 'corridor fee' : 'ramp fee'}`
+    : `0.00001 XLM + ${(FEES.pool*100).toFixed(1)}% pool`;
+  const imp = $('#qmImpact');
+  imp.textContent = (impact * 100).toFixed(2) + '%';
+  imp.style.color = impact > 0.05 ? 'var(--err)' : impact > 0.02 ? 'var(--neon)' : 'var(--ok)';
+  $('#qmMin').textContent = `${fmtAmt(minRec, state.to)} ${state.to}`;
+  // route
+  let route;
+  const fFiat = ASSETS[state.from].kind === 'fiat', tFiat = ASSETS[state.to].kind === 'fiat';
+  if (state.from === state.to) route = '—';
+  else if (!fFiat && !tFiat && (state.from === 'XLM' || state.to === 'XLM')) route = `${state.from} → ${state.to} (direct)`;
+  else if (fFiat && tFiat) route = `${state.from} → USDC → XLM → ${state.to}`;
+  else if (fFiat) route = `${state.from} → USDC(anchor) → ${state.to}`;
+  else if (tFiat) route = `${state.from} → XLM → ${state.to}(anchor)`;
+  else route = `${state.from} → XLM → USDC → ${state.to}`;
+  if (state.routePref === 'direct') route = `${state.from} → ${state.to} (direct only)`;
+  $('#qmRoute').textContent = route;
+  updateSubmit(amt, inUsd);
+}
+function updateSubmit(amt){
+  const btn = $('#submitBtn');
+  if (!state.wallet){ btn.disabled = true; btn.textContent = 'Connect wallet to trade'; return; }
+  if (!amt || amt <= 0){ btn.disabled = true; btn.textContent = 'Enter an amount'; return; }
+  if (state.from === state.to){ btn.disabled = true; btn.textContent = 'Select two different assets'; return; }
+  const need = state.mode === 'sell' || state.mode === 'swap' ? state.from : null;
+  if (need && (state.balances[need] || 0) < amt){ btn.disabled = true; btn.textContent = `Insufficient ${need} balance`; return; }
+  if (state.mode === 'sell'){
+    if (!$('#sellName').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient name'; return; }
+    if (!$('#sellAcct').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient account number'; return; }
+    if (!$('#sellBank').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient bank'; return; }
+  }
+  if (isFiatFiat()){
+    if (!$('#ffName').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient name'; return; }
+    if (!$('#ffAcct').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient account number'; return; }
+    if (!$('#ffBank').value.trim()){ btn.disabled = true; btn.textContent = 'Add recipient bank'; return; }
+  }
+  btn.disabled = false;
+  btn.textContent = isFiatFiat() ? `Send ${state.from} · Receive ${state.to}`
+    : state.mode === 'swap' ? `Swap ${state.from} → ${state.to}`
+    : state.mode === 'buy' ? `Buy ${state.to} with ${state.from}` : `Sell ${state.from} for ${state.to}`;
+}
+$('#amountIn').addEventListener('input', () => {
+  $('#amountIn').value = $('#amountIn').value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+  quote();
+});
+$('#balFrom').addEventListener('click', () => {
+  if (!state.wallet) return;
+  $('#amountIn').value = (state.balances[state.from] || 0).toString();
+  quote();
+});
+$('#flipBtn').addEventListener('click', () => {
+  [state.from, state.to] = [state.to, state.from];
+  $('#amountIn').value = $('#amountOut').value.replace(/,/g, '');
+  syncModeUI(); syncTokenUI(); quote();
+});
+
+/* ---------- TOKEN MODAL ---------- */
+function openTokenModal(side){
+  state.tokenPickSide = side;
+  $('#tokenModalTitle').textContent = side === 'from'
+    ? (state.mode === 'buy' ? 'Pay with' : 'You pay')
+    : (state.mode === 'sell' ? 'You receive (fiat)' : 'You receive');
+  renderTokenList('');
+  $('#tokenSearch').value = '';
+  openModal('#tokenModal');
+  setTimeout(() => $('#tokenSearch').focus(), 150);
+}
+$('#btnFrom').addEventListener('click', () => openTokenModal('from'));
+$('#btnTo').addEventListener('click', () => openTokenModal('to'));
+$('#tokenSearch').addEventListener('input', e => renderTokenList(e.target.value.toLowerCase()));
+function allowedKinds(side){
+  if (state.mode === 'swap') return ['crypto', 'fiat'];
+  if (state.mode === 'buy')  return side === 'from' ? ['fiat'] : ['crypto'];
+  return side === 'from' ? ['crypto'] : ['fiat'];  // sell
+}
+function renderTokenList(q){
+  const kinds = allowedKinds(state.tokenPickSide);
+  const mk = sym => {
+    const a = ASSETS[sym];
+    if (q && !(sym.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))) return '';
+    const bal = state.wallet ? fmtAmt(state.balances[sym] || 0, sym) : '';
+    return `<button class="tk-row" data-sym="${sym}">
+      ${iconHTML(sym)}
+      <span><div class="tk-name">${sym}</div><div class="tk-sub">${a.name}</div></span>
+      <span class="tk-bal">${bal}</span>
+    </button>`;
+  };
+  const crypto = CRYPTO_SYMS.filter(s => kinds.includes('crypto')).map(mk).join('');
+  const fiat = FIAT_SYMS.filter(s => kinds.includes('fiat')).map(mk).join('');
+  $('#tokenList').innerHTML =
+    (crypto ? `<div class="tk-sect">Crypto · Stellar network</div>${crypto}` : '') +
+    (fiat ? `<div class="tk-sect">Fiat · via anchors</div>${fiat}` : '') ||
+    '<div class="empty-state">No assets match your search.</div>';
+}
+$('#tokenList').addEventListener('click', e => {
+  const row = e.target.closest('.tk-row');
+  if (!row) return;
+  const sym = row.dataset.sym;
+  const other = state.tokenPickSide === 'from' ? state.to : state.from;
+  if (sym === other){ // auto-flip instead of blocking
+    if (state.tokenPickSide === 'from') state.to = state.from; else state.from = state.to;
+  }
+  state[state.tokenPickSide] = sym;
+  syncModeUI(); syncTokenUI(); quote(); closeModals();
+});
+
+/* ---------- MODE TABS ---------- */
+function isFiatFiat(){
+  return state.mode === 'swap' && ASSETS[state.from].kind === 'fiat' && ASSETS[state.to].kind === 'fiat';
+}
+let payRefFor = null;
+function renderAdminAcct(){
+  const el = $('#adminAcct');
+  if (!isFiatFiat()){ el.innerHTML = ''; return; }
+  const acc = ADMIN_ACCOUNTS[state.from];
+  if (!acc){ el.innerHTML = '<div class="aa-note">Settlement account for this corridor is being provisioned.</div>'; return; }
+  if (payRefFor !== state.from){
+    payRefFor = state.from;
+    state.payRef = 'CT-' + Array.from({length:6}, () => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*34)]).join('');
+  }
+  el.innerHTML = `
+    <div class="aa-head">
+      <span class="aa-tag">Read-only · set by admin</span>
+      <button class="aa-copy" id="copyAcct">Copy account no.</button>
+    </div>
+    <div class="aa-row"><span>Bank</span><span>${acc.bank}</span></div>
+    <div class="aa-row"><span>Account name</span><span>${acc.name}</span></div>
+    <div class="aa-row"><span>Account number</span><span>${acc.acct}</span></div>
+    <div class="aa-row"><span>Pay via</span><span>${acc.rail}</span></div>
+    <div class="aa-row"><span>Reference</span><span style="color:var(--accent)">${state.payRef}</span></div>
+    <div class="aa-note">Send the exact quoted amount from a ${state.from} account in your name and use the
+    reference above — the payout to your recipient is released automatically on receipt.</div>`;
+  $('#copyAcct').addEventListener('click', () => {
+    navigator.clipboard && navigator.clipboard.writeText(acc.acct).then(() => toast('Account number copied', 'ok'));
+  });
+}
+function syncModeUI(){
+  const ff = isFiatFiat();
+  $('#modeLabel').textContent = ff ? 'Cross-border fiat payment'
+    : state.mode === 'swap' ? 'Cross-asset swap'
+    : state.mode === 'buy' ? 'On-ramp · fiat → crypto' : 'Off-ramp · crypto → bank';
+  $('#rampFields').style.display = (state.mode !== 'swap' || ff) ? 'block' : 'none';
+  $('#payMethodWrap').style.display = state.mode === 'buy' ? 'block' : 'none';
+  $('#bankDestWrap').style.display = state.mode === 'sell' ? 'block' : 'none';
+  $('#fiatFiatWrap').style.display = ff ? 'block' : 'none';
+  renderAdminAcct();
+}
+$$('.swap-tab').forEach(tab => tab.addEventListener('click', () => {
+  $$('.swap-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  state.mode = tab.dataset.tab;
+  // sane defaults per mode
+  if (state.mode === 'buy'  && ASSETS[state.from].kind !== 'fiat'){ state.from = 'USD'; }
+  if (state.mode === 'buy'  && ASSETS[state.to].kind !== 'crypto'){ state.to = 'XLM'; }
+  if (state.mode === 'sell' && ASSETS[state.from].kind !== 'crypto'){ state.from = 'XLM'; }
+  if (state.mode === 'sell' && ASSETS[state.to].kind !== 'fiat'){ state.to = 'EUR'; }
+  if (state.mode === 'swap'){ state.from = 'XLM'; state.to = 'USDC'; }
+  syncModeUI(); syncTokenUI(); quote();
+}));
+$$('.pay-method').forEach(pm => pm.addEventListener('click', () => {
+  $$('.pay-method').forEach(x => x.classList.remove('active'));
+  pm.classList.add('active');
+  state.payMethod = pm.dataset.pm; quote();
+}));
+['sellName','sellAcct','sellBank','ffName','ffAcct','ffBank'].forEach(id =>
+  $('#' + id).addEventListener('input', quote));
+
+/* ---------- SETTINGS ---------- */
+$('#settingsBtn').addEventListener('click', () => openModal('#settingsModal'));
+$$('.slip-opt[data-slip]').forEach(b => b.addEventListener('click', () => {
+  $$('.slip-opt[data-slip]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); state.slippage = +b.dataset.slip; quote();
+}));
+$$('.slip-opt[data-route]').forEach(b => b.addEventListener('click', () => {
+  $$('.slip-opt[data-route]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); state.routePref = b.dataset.route; quote();
+}));
+
+/* ---------- WALLET ---------- */
+$('#connectBtn').addEventListener('click', () => {
+  if (state.wallet){ disconnectWallet(); return; }
+  openModal('#walletModal');
+});
+$$('.wallet-opt').forEach(w => w.addEventListener('click', () => {
+  state.wallet = w.dataset.wallet;
+  // simulated Stellar address
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  state.address = 'G' + Array.from({length:55}, () => abc[Math.floor(Math.random()*32)]).join('');
+  // simulated funded balances
+  state.balances = {
+    XLM: 4820.5, USDC: 1284.22, USDT: 640.5, AQUA: 250000, yXLM: 950,
+    BTC: 0.042, ETH: 1.31, XRP: 1200, BNB: 0.85,
+    USD: 500, EUR: 320, GBP: 0, NGN: 150000, ZAR: 8500, KES: 25000,
+    GHS: 1200, MWK: 0, MZN: 0, BRL: 0, PHP: 0,
+  };
+  const btn = $('#connectBtn');
+  btn.classList.add('connected');
+  btn.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>${state.address.slice(0,5)}…${state.address.slice(-4)}`;
+  closeModals();
+  toast(`${state.wallet} connected — ${state.address.slice(0,8)}…`, 'ok');
+  syncTokenUI(); quote();
+}));
+function disconnectWallet(){
+  state.wallet = null; state.address = null; state.balances = {};
+  const btn = $('#connectBtn');
+  btn.classList.remove('connected'); btn.textContent = 'Connect Wallet';
+  syncTokenUI(); quote();
+  toast('Wallet disconnected');
+}
+
+/* ---------- SUBMIT / EXECUTE ---------- */
+$('#submitBtn').addEventListener('click', () => {
+  const amt = parseFloat($('#amountIn').value.replace(/,/g, ''));
+  const out = parseFloat($('#amountOut').value.replace(/,/g, ''));
+  if (!amt || !out) return;
+  const btn = $('#submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in ' + state.wallet + '…';
+  setTimeout(() => {
+    btn.innerHTML = '<span class="spinner"></span>Routing to CrossTrade escrow…';
+    setTimeout(() => {
+      // settle balances
+      if (state.mode === 'buy'){
+        state.balances[state.to] = (state.balances[state.to] || 0) + out;
+      } else if (state.mode === 'sell'){
+        state.balances[state.from] -= amt;
+      } else {
+        state.balances[state.from] -= amt;
+        state.balances[state.to] = (state.balances[state.to] || 0) + out;
+      }
+      const hash = Array.from({length:64}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+      const ff = isFiatFiat();
+      const line = `${fmtAmt(amt,state.from)} ${state.from} → ${fmtAmt(out,state.to)} ${state.to}`;
+      addActivity(state.mode, line, hash);
+      pushToAdminQueue(amt, out, ff);
+      const succAcc = ADMIN_ACCOUNTS[state.from];
+      $('#succTitle').textContent = ff ? 'Transfer booked — in screening'
+        : state.mode === 'sell' ? 'Sell order booked — in screening'
+        : state.mode === 'buy' ? 'Purchase booked — in screening' : 'Swap booked — in screening';
+      $('#succSub').textContent = ff
+        ? `${line}. Deposit ${fmtAmt(amt, state.from)} ${state.from} to ${succAcc ? succAcc.name : 'the settlement account'} (ref ${state.payRef}); on approval, ${fmtAmt(out, state.to)} ${state.to} pays out to ${$('#ffName').value.trim()} at ${$('#ffBank').value.trim()}. If screening rejects it, your deposit is returned.`
+        : state.mode === 'sell'
+        ? `${line}. Held in escrow for compliance screening — on approval ${fmtAmt(out, state.to)} ${state.to} pays out to ${$('#sellName').value.trim()} at ${$('#sellBank').value.trim()}; if rejected, your ${state.from} is returned.`
+        : state.mode === 'buy'
+        ? `${line}, paid via ${PAY_METHODS[state.payMethod].label}. Crypto is held in the escrow wallet pending screening, then released to you — auto-refunded if rejected.`
+        : `${line}. Your ${state.from} is held in the CrossTrade escrow wallet pending compliance screening — released to the destination on approval, returned to you if rejected.`;
+      $('#succHash').textContent = 'tx ' + hash.slice(0, 20) + '…' + hash.slice(-8);
+      openModal('#successModal');
+      $('#amountIn').value = ''; $('#amountOut').value = '';
+      syncTokenUI(); quote();
+      toast('Transaction confirmed on ledger', 'ok');
+    }, 1400);
+  }, 1100);
+});
+
+/* ---------- ADMIN QUEUE (escrow screening feed) ---------- */
+function pushToAdminQueue(amt, out, ff){
+  try {
+    const q = JSON.parse(localStorage.getItem('ct-admin-queue') || '[]');
+    const ref = ff && state.payRef ? state.payRef
+      : 'CT-' + Array.from({length:6}, () => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*34)]).join('');
+    q.unshift({
+      ref, t: Date.now(), type: ff ? 'fiat' : state.mode,
+      fromSym: state.from, fromAmt: amt, toSym: state.to, toAmt: out,
+      sender: state.mode === 'buy'
+        ? {name: PAY_METHODS[state.payMethod].label + ' payment', acct: state.address}
+        : {name: 'Wallet ' + state.address.slice(0, 8) + '…', acct: state.address},
+      recipient: ff
+        ? {name: $('#ffName').value.trim(), acct: $('#ffAcct').value.trim(), bank: $('#ffBank').value.trim()}
+        : state.mode === 'sell'
+        ? {name: $('#sellName').value.trim(), acct: $('#sellAcct').value.trim(), bank: $('#sellBank').value.trim()}
+        : {name: 'Self · wallet', acct: state.address, bank: '—'},
+      status: 'pending',
+    });
+    localStorage.setItem('ct-admin-queue', JSON.stringify(q.slice(0, 50)));
+  } catch(e){}
+}
+
+/* ---------- ACTIVITY LOG ---------- */
+function addActivity(kind, line, hash){
+  state.activity.unshift({kind, line, hash, t: Date.now()});
+  state.activity = state.activity.slice(0, 12);
+  localStorage.setItem('ct-activity', JSON.stringify(state.activity));
+  renderActivity();
+}
+function ago(t){
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+function renderActivity(){
+  const el = $('#activityList');
+  $('#actCount').textContent = state.activity.length + (state.activity.length === 1 ? ' txn' : ' txns');
+  if (!state.activity.length){
+    el.innerHTML = '<div class="empty-state">No transactions yet.<br>Connect a wallet and make your first cross-asset swap.</div>';
+    return;
+  }
+  el.innerHTML = state.activity.map(a => `
+    <div class="act-row">
+      <span class="act-ico ${a.kind}">${a.kind === 'swap' ? '⇄' : a.kind === 'buy' ? '↓' : '↑'}</span>
+      <span><div class="a-main">${a.line}</div>
+      <div class="a-sub">${a.hash.slice(0,14)}…</div></span>
+      <span class="a-time">${ago(a.t)}</span>
+    </div>`).join('');
+}
+renderActivity();
+setInterval(renderActivity, 30000);
+
+/* init */
+syncTokenUI(); quote();
+</script>
+</body>
+</html>
