@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrossTrade Widget — Live Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  background:#050308;font-family:'Inter',sans-serif;color:#9a93b8;padding:40px 20px;
+  background-image:radial-gradient(700px 420px at 15% 0%,rgba(106,72,242,.18),transparent 60%),
+                   radial-gradient(600px 400px at 90% 90%,rgba(252,159,223,.08),transparent 60%);
+}
+.hd{text-align:center}
+.hd .mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#6a48f2,#a86fff 55%,#fc9fdf);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:23px;color:#fff;margin:0 auto 12px}
+.hd h1{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2.5px;color:#f3f0ff}
+.hd p{font-size:12.5px;margin-top:6px}
+.hd p a{color:#a86fff;text-decoration:none;font-weight:700}
+.note{font-size:11.5px;max-width:420px;text-align:center;line-height:1.6;color:#6d6690}
+.note code{font-family:'JetBrains Mono',monospace;color:#a86fff;font-size:10.5px}
+.theme-tog{display:flex;gap:6px;background:#141026;border:1px solid rgba(168,111,255,.22);border-radius:99px;padding:4px}
+.theme-tog button{border:none;background:none;color:#9a93b8;font-size:11.5px;font-weight:700;padding:7px 18px;border-radius:99px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+.theme-tog button.on{background:linear-gradient(135deg,#6a48f2,#a86fff);color:#fff}
+.stage{transition:background .3s;border-radius:24px;padding:30px}
+.stage.light{background:#e9e6f7}
+</style>
+</head>
+<body>
+  <div class="hd">
+    <div class="mark">C</div>
+    <h1>WIDGET PREVIEW</h1>
+    <p>This is the CrossTrade trading card exactly as it appears when embedded. <a href="embed.html">Get your shortcode →</a></p>
+  </div>
+
+  <div class="theme-tog">
+    <button id="tDark" class="on">Dark theme</button>
+    <button id="tLight">Light theme</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="ct-swap-widget" id="wHost" data-ref="PREVIEW" data-theme="dark" data-mode="swap" data-from="USD" data-to="NGN" data-amount="500"></div>
+  </div>
+
+  <p class="note">Embed it with one line — <code>&lt;script src="ct-widget.js" data-ref="YOUR-CODE"&gt;&lt;/script&gt;</code> — and every Swap, Buy or Sell through it earns you 30% of the fee (your referrers get 20% / 10%).</p>
+
+  <script>
+  /* theme toggle rebuilds the widget host, then asks the loader to re-scan */
+  function applyTheme(t){
+    document.getElementById('tDark').classList.toggle('on', t === 'dark');
+    document.getElementById('tLight').classList.toggle('on', t === 'light');
+    document.getElementById('stage').classList.toggle('light', t === 'light');
+    const host = document.getElementById('wHost');
+    host.outerHTML = '<div class="ct-swap-widget" id="wHost" data-ref="PREVIEW" data-theme="' + t + '" data-mode="swap" data-from="USD" data-to="NGN" data-amount="500"></div>';
+    window.__ctBoot && window.__ctBoot();
+  }
+  document.getElementById('tDark').addEventListener('click', () => applyTheme('dark'));
+  document.getElementById('tLight').addEventListener('click', () => applyTheme('light'));
+  </script>
+  <script>
+  /* load the widget and expose its boot for theme re-mounts */
+  const s = document.createElement('script');
+  s.src = 'ct-widget.js';
+  document.body.appendChild(s);
+  </script>
+</body>
+</html>

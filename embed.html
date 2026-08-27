@@ -129,10 +129,10 @@ footer a{color:var(--accent);text-decoration:none}
   </nav>
 
   <div class="hero">
-    <div class="kicker">SWAP WIDGET · 3-LEVEL REFERRALS</div>
+    <div class="kicker">EXCHANGE WIDGET · 3-LEVEL REFERRALS</div>
     <h1>PUT CROSSTRADE<br>ON <span>YOUR SITE.</span></h1>
-    <p>One line of code adds a fully working cross-border swap card to any website.
-       Every swap through your embed pays you <b>30% of the CrossTrade fee</b> — and the partners
+    <p>One line of code embeds the full CrossTrade card — <b>Swap, Buy and Sell</b> — on any website.
+       Every trade through your embed pays you <b>30% of the CrossTrade fee</b> — and the partners
        above you in the chain earn <b>20%</b> and <b>10%</b>. No SDK, no backend, no API key.</p>
   </div>
 
@@ -142,8 +142,8 @@ footer a{color:var(--accent);text-decoration:none}
     <p class="sub">Copy the snippet, paste it anywhere in your HTML, done. The widget inherits nothing from your page and conflicts with nothing — it runs fully isolated.</p>
     <div class="steps">
       <div class="step"><div class="n">01</div><h3>Get your referral code</h3><p>Generate a free code in the dashboard below. Optionally enter the code of whoever referred you — they'll earn on your traffic too.</p></div>
-      <div class="step"><div class="n">02</div><h3>Paste the shortcode</h3><p>Drop the script tag into any page, blog, or CMS. Set your code, theme, and default currency pair via data attributes.</p></div>
-      <div class="step"><div class="n">03</div><h3>Earn on every swap</h3><p>Your visitors swap; you collect 30% of every fee automatically. Track earnings live in the referral dashboard.</p></div>
+      <div class="step"><div class="n">02</div><h3>Paste the shortcode</h3><p>Drop the script tag into any page, blog, or CMS. Set your code, theme, default tab (swap / buy / sell) and currency pair via data attributes.</p></div>
+      <div class="step"><div class="n">03</div><h3>Earn on every trade</h3><p>Your visitors swap, buy and sell; you collect 30% of every fee automatically. Track earnings live in the referral dashboard.</p></div>
     </div>
   </section>
 
@@ -161,11 +161,11 @@ footer a{color:var(--accent);text-decoration:none}
     </div>
 
     <div class="codecard">
-      <div class="bar"><span class="t">Custom pair + amount</span><span class="d">light theme · ZAR → USDC · 5,000 preset</span>
+      <div class="bar"><span class="t">Custom tab, pair + amount</span><span class="d">light theme · opens on Buy tab · ZAR → USDC · 5,000 preset</span>
         <button class="copy" data-copy="custom">Copy</button></div>
       <pre id="cc-custom">&lt;script src=<span class="s">"https://crosstrade.app/ct-widget.js"</span>
         <span class="k">data-ref</span>=<span class="s">"<span class="u-ref">YOUR-CODE</span>"</span>
-        <span class="k">data-theme</span>=<span class="s">"light"</span>
+        <span class="k">data-theme</span>=<span class="s">"light"</span> <span class="k">data-mode</span>=<span class="s">"buy"</span>
         <span class="k">data-from</span>=<span class="s">"ZAR"</span> <span class="k">data-to</span>=<span class="s">"USDC"</span>
         <span class="k">data-amount</span>=<span class="s">"5000"</span>&gt;&lt;/script&gt;</pre>
     </div>
@@ -181,15 +181,15 @@ footer a{color:var(--accent);text-decoration:none}
   <!-- ================= LIVE PREVIEW ================= -->
   <section id="preview">
     <h2>WHAT YOUR VISITORS SEE</h2>
-    <p class="sub">These are the live widgets — try one. Both are fully functional and settle on the Stellar simulation rail.</p>
+    <p class="sub">These are the live widgets — try one. Swap, Buy and Sell tabs are all fully functional and settle on the Stellar simulation rail. <a href="widget.html" style="color:var(--accent);font-weight:700">Open the focused card-only preview →</a></p>
     <div class="previews">
       <div class="pv dark">
-        <div class="cap">data-theme="dark"</div>
-        <script src="ct-widget.js" data-ref="DEMO-DARK" data-theme="dark" data-from="USD" data-to="NGN" data-amount="500"></script>
+        <div class="cap">data-theme="dark" · opens on Swap</div>
+        <script src="ct-widget.js" data-ref="DEMO-DARK" data-theme="dark" data-mode="swap" data-from="USD" data-to="NGN" data-amount="500"></script>
       </div>
       <div class="pv light">
-        <div class="cap">data-theme="light"</div>
-        <script src="ct-widget.js" data-ref="DEMO-LIGHT" data-theme="light" data-from="ZAR" data-to="GHS" data-amount="5000"></script>
+        <div class="cap">data-theme="light" · opens on Buy</div>
+        <script src="ct-widget.js" data-ref="DEMO-LIGHT" data-theme="light" data-mode="buy" data-from="ZAR" data-to="USDC" data-amount="5000"></script>
       </div>
     </div>
   </section>
@@ -199,9 +199,9 @@ footer a{color:var(--accent);text-decoration:none}
     <h2>THREE LEVELS OF REFERRAL INCOME</h2>
     <p class="sub">Every widget embed carries a referral code. Codes can be chained — when someone you referred starts embedding, you earn on their traffic too, three levels deep.</p>
     <div class="chain">
-      <div class="lvl"><span class="tag">LEVEL 1</span><div class="pct">30%</div><h3>Your embeds</h3><p>You place the widget with your code. Every swap through it pays you 30% of the 0.8% CrossTrade fee.</p></div>
-      <div class="lvl"><span class="tag">LEVEL 2</span><div class="pct">20%</div><h3>Partners you referred</h3><p>Someone registers with your code as their referrer. Every swap through <i>their</i> embeds pays you 20% of the fee.</p></div>
-      <div class="lvl"><span class="tag">LEVEL 3</span><div class="pct">10%</div><h3>Their partners</h3><p>One more level down: swaps through your partners' partners' embeds still pay you 10% of the fee.</p></div>
+      <div class="lvl"><span class="tag">LEVEL 1</span><div class="pct">30%</div><h3>Your embeds</h3><p>You place the widget with your code. Every trade through it pays you 30% of the CrossTrade fee.</p></div>
+      <div class="lvl"><span class="tag">LEVEL 2</span><div class="pct">20%</div><h3>Partners you referred</h3><p>Someone registers with your code as their referrer. Every trade through <i>their</i> embeds pays you 20% of the fee.</p></div>
+      <div class="lvl"><span class="tag">LEVEL 3</span><div class="pct">10%</div><h3>Their partners</h3><p>One more level down: trades through your partners' partners' embeds still pay you 10% of the fee.</p></div>
     </div>
     <div class="math">
       <h3>Worked example — a $1,000 swap</h3>
@@ -220,7 +220,7 @@ footer a{color:var(--accent);text-decoration:none}
   <!-- ================= DASHBOARD ================= -->
   <section id="dashboard">
     <h2 id="getcode">REFERRAL DASHBOARD</h2>
-    <p class="sub">Generate your code, build your chain, and watch earnings arrive as visitors swap through your embeds. Codes and earnings are stored in this browser.</p>
+    <p class="sub">Generate your code, build your chain, and watch earnings arrive as visitors trade through your embeds. Codes and earnings are stored in this browser.</p>
     <div class="dash">
       <div class="genrow">
         <input id="newCode" placeholder="Pick your code (e.g. MY-BLOG)" maxlength="18">
@@ -246,14 +246,14 @@ footer a{color:var(--accent);text-decoration:none}
       </div>
       <div class="empty" id="ledgerEmpty">No referral earnings yet — embed a widget and make a swap above to see the ledger fill in.</div>
 
-      <div class="lbl">Recent widget swaps (all embeds in this browser)</div>
+      <div class="lbl">Recent widget trades (all embeds in this browser)</div>
       <div style="overflow-x:auto">
       <table class="ledger">
-        <thead><tr><th>When</th><th>Ref</th><th>From</th><th>To</th><th>Widget code</th><th style="text-align:right">Fee (USD)</th></tr></thead>
+        <thead><tr><th>When</th><th>Ref</th><th>Mode</th><th>From</th><th>To</th><th>Widget code</th><th style="text-align:right">Fee (USD)</th></tr></thead>
         <tbody id="swapsBody"></tbody>
       </table>
       </div>
-      <div class="empty" id="swapsEmpty">No widget swaps recorded yet.</div>
+      <div class="empty" id="swapsEmpty">No widget trades recorded yet.</div>
 
       <div class="lbl">Snippet with your code</div>
       <div class="codecard" style="margin-bottom:0">
@@ -298,7 +298,7 @@ document.querySelectorAll('.copy').forEach(btn=>{
   btn.addEventListener('click',()=>{
     let txt;
     if(btn.dataset.copy==='basic')  txt=snippetFor(currentCode());
-    if(btn.dataset.copy==='custom') txt=`<script src="https://crosstrade.app/ct-widget.js"\n        data-ref="${currentCode()}"\n        data-theme="light"\n        data-from="ZAR" data-to="USDC"\n        data-amount="5000"><\/script>`;
+    if(btn.dataset.copy==='custom') txt=`<script src="https://crosstrade.app/ct-widget.js"\n        data-ref="${currentCode()}"\n        data-theme="light" data-mode="buy"\n        data-from="ZAR" data-to="USDC"\n        data-amount="5000"><\/script>`;
     if(btn.dataset.copy==='div')    txt=`<div class="ct-swap-widget" data-ref="${currentCode()}" data-theme="dark"></div>\n<script src="https://crosstrade.app/ct-widget.js"><\/script>`;
     if(btn.dataset.copy==='mine')   txt=snippetFor(currentCode());
     navigator.clipboard.writeText(txt).then(()=>{
@@ -339,7 +339,7 @@ function renderDash(){
   /* swaps */
   const sb=document.getElementById('swapsBody'), se=document.getElementById('swapsEmpty');
   const sw=[...swaps].sort((a,b)=>b.ts-a.ts).slice(0,25);
-  sb.innerHTML=sw.map(s=>`<tr><td>${when(s.ts)}</td><td>${s.ref}</td><td>${s.amount} ${s.from}</td><td>${s.to}</td><td>${s.widgetRef||'—'}</td><td style="text-align:right">${money(s.feeUsd)}</td></tr>`).join('');
+  sb.innerHTML=sw.map(s=>`<tr><td>${when(s.ts)}</td><td>${s.ref}</td><td>${(s.mode||'swap').toUpperCase()}</td><td>${s.amount} ${s.from}</td><td>${s.to}</td><td>${s.widgetRef||'—'}</td><td style="text-align:right">${money(s.feeUsd)}</td></tr>`).join('');
   se.style.display=sw.length?'none':'block';
 
   /* personal snippet */

@@ -1,18 +1,21 @@
 /* ============================================================================
-   CrossTrade Swap Widget — embeddable shortcode script
+   CrossTrade Swap · Buy · Sell Widget — embeddable shortcode script
    ----------------------------------------------------------------------------
    Usage (one line on any site):
 
    <script src="https://your-domain.com/ct-widget.js"
            data-ref="YOUR-REF-CODE"
            data-theme="dark"
+           data-mode="swap"
            data-from="USD" data-to="NGN"
            data-amount="500"></script>
 
-   Every swap through your embed pays you 30% of the CrossTrade fee (level 1).
-   The partner who referred YOU earns 20% (level 2), and their referrer 10%
-   (level 3). Data is stored in the visitor's browser (localStorage) — this is
-   a simulated environment; no real funds move.
+   The widget embeds the full CrossTrade exchange card: Swap (any pair),
+   Buy (fiat → crypto via card / bank / PayPal / VALR / Revolut / MoMo) and
+   Sell (crypto → fiat to a bank account). Every trade through your embed pays
+   you 30% of the CrossTrade fee (level 1); the partner who referred YOU earns
+   20% (level 2) and their referrer 10% (level 3). Simulated environment —
+   no real funds move; data is stored in the visitor's browser.
    ========================================================================== */
 (function () {
   'use strict';
@@ -40,10 +43,20 @@
     BRL:  {name:'Brazilian Real',   px:0.19,   kind:'fiat', flag:'🇧🇷'},
     PHP:  {name:'Philippine Peso',  px:0.017,  kind:'fiat', flag:'🇵🇭'},
   };
-  const SYMS = Object.keys(ASSETS);
+  const SYMS    = Object.keys(ASSETS);
+  const FIAT    = SYMS.filter(s => ASSETS[s].kind === 'fiat');
+  const CRYPTO  = SYMS.filter(s => ASSETS[s].kind === 'crypto');
 
-  /* ---------- platform fee + referral split ---------- */
-  const FEE_RATE   = 0.008;                    /* 0.8% CrossTrade fee per swap */
+  /* ---------- fees (mirror the main app) ---------- */
+  const FEES = { pool: 0.003, corridor: 0.01, sell: 0.008 };
+  const PAY_METHODS = {
+    card:   {label:'Debit / Credit Card',   fee:0.018, speed:'instant'},
+    bank:   {label:'Bank Transfer',         fee:0.005, speed:'~1 day'},
+    paypal: {label:'PayPal',                fee:0.025, speed:'instant'},
+    valr:   {label:'VALR',                  fee:0.010, speed:'instant'},
+    revolut:{label:'Revolut',               fee:0.009, speed:'instant'},
+    momo:   {label:'MoMo · Mobile Money',   fee:0.012, speed:'instant'},
+  };
   const REF_LEVELS = [0.30, 0.20, 0.10];       /* L1 / L2 / L3 share of the fee */
 
   /* ---------- referral storage (shared with the embed dashboard) ---------- */
@@ -75,32 +88,46 @@
   /* ---------- helpers ---------- */
   const usdOf   = (sym, amt) => amt * ASSETS[sym].px;
   const convert = (from, to, amt) => usdOf(from, amt) / ASSETS[to].px;
+  const isFiat  = sym => ASSETS[sym].kind === 'fiat';
   const fmt = (n, sym) => {
-    const d = ASSETS[sym].px >= 100 ? 2 : ASSETS[sym].px >= 0.01 ? 2 : ASSETS[sym].px >= 0.001 ? 4 : 6;
+    const d = isFiat(sym) ? 2 : ASSETS[sym].px >= 100 ? 2 : ASSETS[sym].px >= 0.01 ? 4 : 6;
     return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   };
-  const money = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const money  = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const newRef = () => 'CT-W' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  /* push the trade into the admin console escrow queue (same shape as the app) */
+  function pushToAdminQueue(rec) {
+    try {
+      const q = store.read('ct-admin-queue', []);
+      q.unshift(rec);
+      store.write('ct-admin-queue', q.slice(0, 50));
+    } catch (e) {}
+  }
 
   /* ---------- widget styles (scoped inside shadow DOM) ---------- */
   const CSS = `
     :host { all: initial; display: block; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
     .ctw {
-      width: 100%; max-width: 400px; border-radius: 18px; padding: 18px;
+      width: 100%; max-width: 420px; border-radius: 18px; padding: 18px;
       font-family: 'Inter', system-ui, sans-serif; color: var(--ink);
       background: var(--bg); border: 1px solid var(--line);
       --grad: linear-gradient(135deg, #6a48f2, #a86fff 55%, #fc9fdf);
     }
     .ctw.dark { --bg:#0b0714; --bg2:#141026; --ink:#f3f0ff; --muted:#9a93b8; --line:rgba(168,111,255,.22); --fld:#171129; }
     .ctw.light { --bg:#ffffff; --bg2:#f6f3ff; --ink:#17122b; --muted:#6d6690; --line:rgba(106,72,242,.25); --fld:#f3f0fc; }
-    .head { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+    .head { display:flex; align-items:center; gap:9px; margin-bottom:12px; }
     .logo { width:26px; height:26px; border-radius:8px; background:var(--grad); display:flex; align-items:center; justify-content:center;
             font-family:'Bebas Neue', sans-serif; font-size:16px; color:#fff; letter-spacing:.5px; }
     .brand { font-family:'Bebas Neue', sans-serif; font-size:19px; letter-spacing:2.5px; color:var(--ink); }
-    .brand small { font-size:10px; letter-spacing:1.5px; color:var(--muted); display:block; margin-top:-3px; font-family:'Inter',sans-serif; font-weight:600; }
+    .brand small { font-size:9px; letter-spacing:1.5px; color:var(--muted); display:block; margin-top:-3px; font-family:'Inter',sans-serif; font-weight:600; }
     .refpill { margin-left:auto; font-size:9.5px; font-weight:700; letter-spacing:.8px; color:#a86fff;
                border:1px solid rgba(168,111,255,.4); padding:3px 8px; border-radius:99px; white-space:nowrap; }
+    .tabs { display:flex; gap:4px; background:var(--fld); border:1px solid var(--line); border-radius:11px; padding:4px; margin-bottom:13px; }
+    .tabs button { flex:1; border:none; background:none; color:var(--muted); font-size:12px; font-weight:700; padding:7px 0;
+                   border-radius:8px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+    .tabs button.on { background:var(--bg2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line); }
     .box { background:var(--fld); border:1px solid var(--line); border-radius:13px; padding:11px 13px; }
     .box label { font-size:10px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
     .row { display:flex; align-items:center; gap:10px; }
@@ -108,45 +135,73 @@
                 font-family:'JetBrains Mono', monospace; font-size:21px; font-weight:600; }
     input.amt::placeholder { color:var(--muted); opacity:.55; }
     select.cur { background:var(--bg2); color:var(--ink); border:1px solid var(--line); border-radius:99px;
-                 padding:6px 10px; font-size:12.5px; font-weight:700; outline:none; cursor:pointer; max-width:118px; }
+                 padding:6px 10px; font-size:12.5px; font-weight:700; outline:none; cursor:pointer; max-width:122px; }
     .usd { font-size:11px; color:var(--muted); font-family:'JetBrains Mono', monospace; margin-top:5px; }
     .flip { display:flex; justify-content:center; margin:-6px 0; position:relative; z-index:1; }
     .flip button { width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--bg2);
                    color:#a86fff; font-size:15px; cursor:pointer; transition:transform .25s; line-height:1; }
     .flip button:hover { transform:rotate(180deg); }
+    .extra { margin-top:11px; }
+    .extra .box { padding:10px 13px; }
+    .paysel { width:100%; background:var(--bg2); color:var(--ink); border:1px solid var(--line); border-radius:10px;
+              padding:9px 11px; font-size:12.5px; font-weight:600; outline:none; cursor:pointer; }
+    .flds input { width:100%; background:var(--bg2); border:1px solid var(--line); border-radius:9px; padding:9px 11px;
+                  color:var(--ink); font-size:12px; outline:none; font-family:'Inter',sans-serif; margin-top:6px; }
+    .flds input:first-child { margin-top:0; }
+    .flds input::placeholder, .dest input::placeholder { color:var(--muted); opacity:.6; }
     .meta { margin:12px 2px 0; font-size:11.5px; color:var(--muted); }
     .meta div { display:flex; justify-content:space-between; padding:3px 0; }
-    .meta b { color:var(--ink); font-family:'JetBrains Mono', monospace; font-weight:600; }
+    .meta b { color:var(--ink); font-family:'JetBrains Mono', monospace; font-weight:600; text-align:right; }
     .dest { margin-top:12px; }
     .dest input { width:100%; background:var(--fld); border:1px solid var(--line); border-radius:11px; padding:10px 12px;
                   color:var(--ink); font-size:12.5px; outline:none; font-family:'Inter',sans-serif; }
-    .dest input::placeholder { color:var(--muted); opacity:.6; }
     .go { width:100%; margin-top:13px; border:none; border-radius:13px; padding:13px; cursor:pointer;
-          background:var(--grad); color:#fff; font-size:13.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase;
-          transition:opacity .2s, transform .1s; }
+          background:var(--grad); color:#fff; font-size:13px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+          transition:opacity .2s, transform .1s; font-family:'Inter',sans-serif; }
     .go:hover { opacity:.92; } .go:active { transform:scale(.985); }
     .go:disabled { opacity:.55; cursor:default; }
     .foot { margin-top:11px; text-align:center; font-size:10px; color:var(--muted); letter-spacing:.4px; }
     .foot a { color:#a86fff; text-decoration:none; font-weight:700; }
     /* success state */
-    .done { text-align:center; padding:26px 8px 10px; }
+    .done { text-align:center; padding:22px 6px 8px; }
     .check { width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:var(--grad);
              display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; }
-    .done h3 { font-family:'Bebas Neue', sans-serif; font-size:22px; letter-spacing:1.5px; color:var(--ink); margin-bottom:6px; }
+    .done h3 { font-family:'Bebas Neue', sans-serif; font-size:21px; letter-spacing:1.5px; color:var(--ink); margin-bottom:6px; }
     .done p { font-size:12px; color:var(--muted); line-height:1.55; }
     .done .ref { font-family:'JetBrains Mono', monospace; color:var(--ink); font-weight:600; }
+    .escrow { margin-top:12px; font-size:10.5px; color:var(--muted); border:1px dashed var(--line); border-radius:10px; padding:8px 11px; line-height:1.5; }
     .earn { margin:13px 0 3px; background:var(--fld); border:1px solid var(--line); border-radius:11px; padding:10px 12px; text-align:left; }
     .earn div { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); padding:2.5px 0; }
     .earn b { color:#2fd47e; font-family:'JetBrains Mono', monospace; font-weight:600; }
     .again { margin-top:14px; background:none; border:1px solid var(--line); color:var(--ink); border-radius:11px;
-             padding:9px 18px; font-size:12px; font-weight:700; cursor:pointer; }
+             padding:9px 18px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; }
     .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
             border-radius:50%; animation:ctw-rot .7s linear infinite; vertical-align:-2px; margin-right:7px; }
     @keyframes ctw-rot { to { transform:rotate(360deg); } }
-    @media (max-width:420px){ .ctw{ max-width:100%; } }
+    @media (max-width:440px){ .ctw{ max-width:100%; } }
   `;
 
-  /* ---------- widget markup ---------- */
+  /* ---------- per-mode defaults and currency rules ---------- */
+  const MODE_DEFAULTS = {
+    swap: { from: 'USD',  to: 'NGN'  },
+    buy:  { from: 'USD',  to: 'XLM'  },
+    sell: { from: 'XLM',  to: 'ZAR'  },
+  };
+  function allowed(mode, side) {
+    if (mode === 'swap') return SYMS;
+    if (mode === 'buy')  return side === 'from' ? FIAT : CRYPTO;
+    return side === 'from' ? CRYPTO : FIAT; /* sell */
+  }
+  const feeRateFor = st =>
+    st.mode === 'buy'  ? PAY_METHODS[st.payMethod].fee :
+    st.mode === 'sell' ? FEES.sell :
+    (isFiat(st.from) && isFiat(st.to)) ? FEES.corridor : FEES.pool;
+  const feeNameFor = st =>
+    st.mode === 'buy'  ? 'ramp fee' :
+    st.mode === 'sell' ? 'off-ramp fee' :
+    (isFiat(st.from) && isFiat(st.to)) ? 'corridor fee' : 'pool fee';
+
+  /* ---------- widget ---------- */
   function buildWidget(host, cfg) {
     const shadow = host.attachShadow({ mode: 'open' });
 
@@ -160,115 +215,219 @@
     const root = document.createElement('div');
     root.className = 'ctw ' + (cfg.theme === 'light' ? 'light' : 'dark');
 
-    const opts = (sel) => SYMS.map(s =>
-      `<option value="${s}" ${s === sel ? 'selected' : ''}>${ASSETS[s].flag ? ASSETS[s].flag + ' ' : ''}${s}</option>`).join('');
+    const st = {
+      mode: ['swap', 'buy', 'sell'].includes(cfg.mode) ? cfg.mode : 'swap',
+      from: MODE_DEFAULTS[cfg.mode] && allowed(cfg.mode, 'from').includes(cfg.from) ? cfg.from : (MODE_DEFAULTS[cfg.mode] || MODE_DEFAULTS.swap).from,
+      to:   MODE_DEFAULTS[cfg.mode] && allowed(cfg.mode, 'to').includes(cfg.to)     ? cfg.to   : (MODE_DEFAULTS[cfg.mode] || MODE_DEFAULTS.swap).to,
+      payMethod: 'card',
+    };
 
     root.innerHTML = `
       <div class="head">
         <div class="logo">C</div>
-        <div class="brand">CROSSTRADE<small>INSTANT SWAP</small></div>
+        <div class="brand">CROSSTRADE<small>SWAP · BUY · SELL</small></div>
         ${cfg.ref ? `<div class="refpill" title="This embed earns referral income">REF · ${cfg.ref}</div>` : ''}
       </div>
-      <div class="swapview">
-        <div class="box">
-          <label>You send</label>
-          <div class="row">
-            <input class="amt" id="wAmtIn" type="number" min="0" step="any" value="${cfg.amount}" placeholder="0.00">
-            <select class="cur" id="wFrom">${opts(cfg.from)}</select>
-          </div>
-          <div class="usd" id="wUsdIn"></div>
-        </div>
-        <div class="flip"><button id="wFlip" title="Flip pair" type="button">⇅</button></div>
-        <div class="box">
-          <label>They receive</label>
-          <div class="row">
-            <input class="amt" id="wAmtOut" type="text" readonly placeholder="0.00">
-            <select class="cur" id="wTo">${opts(cfg.to)}</select>
-          </div>
-          <div class="usd" id="wUsdOut"></div>
-        </div>
-        <div class="meta">
-          <div><span>Rate</span><b id="wRate"></b></div>
-          <div><span>CrossTrade fee (0.8%)</span><b id="wFee"></b></div>
-          <div><span>Settlement</span><b>~5 sec · Stellar</b></div>
-        </div>
-        <div class="dest"><input id="wDest" type="text" placeholder="Recipient wallet address or bank account"></div>
-        <button class="go" id="wGo" type="button">Swap now</button>
+      <div class="tabs">
+        <button data-m="swap" type="button">Swap</button>
+        <button data-m="buy"  type="button">Buy</button>
+        <button data-m="sell" type="button">Sell</button>
       </div>
-      <div class="foot">Powered by <a href="https://crosstrade.app" target="_blank" rel="noopener">CrossTrade</a> · site owner earns 30% referral · simulated demo</div>
+      <div class="swapview"></div>
+      <div class="foot">Powered by <a href="https://crosstrade.app" target="_blank" rel="noopener">CrossTrade</a> · <a href="https://crosstrade.app/embed.html" target="_blank" rel="noopener">get this widget</a> · simulated demo</div>
     `;
 
     shadow.append(fonts, style, root);
+    const $ = sel => shadow.querySelector(sel);
+    const view = root.querySelector('.swapview');
 
-    /* ---------- behaviour ---------- */
-    const $ = id => shadow.getElementById(id);
-    const amtIn = $('wAmtIn'), amtOut = $('wAmtOut'), from = $('wFrom'), to = $('wTo');
+    const opts = (list, sel) => list.map(s =>
+      `<option value="${s}" ${s === sel ? 'selected' : ''}>${ASSETS[s].flag ? ASSETS[s].flag + ' ' : ''}${s}</option>`).join('');
 
-    function quote() {
-      const a = parseFloat(amtIn.value) || 0;
-      const f = from.value, t = to.value;
-      if (!a || f === t) { amtOut.value = ''; $('wUsdIn').textContent = ''; $('wUsdOut').textContent = '';
-        $('wRate').textContent = f === t ? 'pick two different currencies' : ''; $('wFee').textContent = ''; return null; }
-      const gross = convert(f, t, a);
-      const feeUsd = usdOf(f, a) * FEE_RATE;
-      const net = convert(f, t, a * (1 - FEE_RATE));
-      amtOut.value = fmt(net, t);
-      $('wUsdIn').textContent  = '≈ ' + money(usdOf(f, a));
-      $('wUsdOut').textContent = '≈ ' + money(usdOf(t, net));
-      $('wRate').textContent   = `1 ${f} = ${fmt(convert(f, t, 1), t)} ${t}`;
-      $('wFee').textContent    = money(feeUsd) + (cfg.ref ? ` · you earn ${money(feeUsd * REF_LEVELS[0])}` : '');
-      return { a, f, t, net, feeUsd };
+    /* ---------- form ---------- */
+    function renderForm() {
+      const ff = st.mode === 'swap' && isFiat(st.from) && isFiat(st.to);
+      const needRecipients = ff || st.mode === 'sell';
+      const extra = st.mode === 'buy' ? `
+        <div class="extra"><div class="box">
+          <label>Pay with</label>
+          <select class="paysel" id="wPay">
+            ${Object.keys(PAY_METHODS).map(k => `<option value="${k}" ${k === st.payMethod ? 'selected' : ''}>${PAY_METHODS[k].label} · ${(PAY_METHODS[k].fee * 100).toFixed(1)}% · ${PAY_METHODS[k].speed}</option>`).join('')}
+          </select>
+        </div></div>`
+      : needRecipients ? `
+        <div class="extra"><div class="box">
+          <label>${ff ? 'Recipient details' : 'Payout account'}</label>
+          <div class="flds">
+            <input id="wRcpName" placeholder="Recipient full name">
+            <input id="wRcpAcct" placeholder="Account number / IBAN / mobile money">
+            <input id="wRcpBank" placeholder="Bank / provider name">
+          </div>
+        </div></div>` : '';
+
+      view.innerHTML = `
+        <div class="box">
+          <label>${st.mode === 'buy' ? 'You pay' : 'You send'}</label>
+          <div class="row">
+            <input class="amt" id="wAmtIn" type="number" min="0" step="any" value="${cfg.amount}" placeholder="0.00">
+            <select class="cur" id="wFrom">${opts(allowed(st.mode, 'from'), st.from)}</select>
+          </div>
+          <div class="usd" id="wUsdIn"></div>
+        </div>
+        ${st.mode === 'swap' ? '<div class="flip"><button id="wFlip" title="Flip pair" type="button">⇅</button></div>' : '<div style="height:10px"></div>'}
+        <div class="box">
+          <label>${st.mode === 'sell' ? 'You receive (fiat)' : 'They receive'}</label>
+          <div class="row">
+            <input class="amt" id="wAmtOut" type="text" readonly placeholder="0.00">
+            <select class="cur" id="wTo">${opts(allowed(st.mode, 'to'), st.to)}</select>
+          </div>
+          <div class="usd" id="wUsdOut"></div>
+        </div>
+        ${extra}
+        <div class="meta">
+          <div><span>Rate</span><b id="wRate"></b></div>
+          <div><span id="wFeeLbl">Fee</span><b id="wFee"></b></div>
+          <div><span>Settlement</span><b>~5 sec · Stellar</b></div>
+        </div>
+        ${st.mode !== 'sell' && !ff ? '<div class="dest"><input id="wDest" type="text" placeholder="Recipient wallet address or bank account"></div>' : ''}
+        <button class="go" id="wGo" type="button"></button>
+      `;
+
+      $('#wAmtIn').addEventListener('input', quote);
+      $('#wFrom').addEventListener('change', e => { st.from = e.target.value; if (st.mode === 'swap') renderForm(); else quote(); });
+      $('#wTo').addEventListener('change', e => { st.to = e.target.value; if (st.mode === 'swap') renderForm(); else quote(); });
+      const pay = $('#wPay'); if (pay) pay.addEventListener('change', e => { st.payMethod = e.target.value; quote(); });
+      const flip = $('#wFlip'); if (flip) flip.addEventListener('click', () => { const f = st.from; st.from = st.to; st.to = f; renderForm(); });
+      $('#wGo').addEventListener('click', submit);
+      quote();
     }
 
-    amtIn.addEventListener('input', quote);
-    from.addEventListener('change', quote);
-    to.addEventListener('change', quote);
-    $('wFlip').addEventListener('click', () => {
-      const f = from.value; from.value = to.value; to.value = f; quote();
-    });
+    /* ---------- quote ---------- */
+    function quote() {
+      const a = parseFloat(($('#wAmtIn') || {}).value) || 0;
+      const outEl = $('#wAmtOut');
+      const f = st.from, t = st.to;
+      if (!a || a <= 0 || f === t) {
+        outEl.value = ''; $('#wUsdIn').textContent = ''; $('#wUsdOut').textContent = '';
+        $('#wRate').textContent = f === t ? 'pick two different currencies' : '—';
+        $('#wFee').textContent = ''; updateCta(0); return null;
+      }
+      const rate = feeRateFor(st);
+      const feeUsd = usdOf(f, a) * rate;
+      const net = convert(f, t, a * (1 - rate));
+      outEl.value = fmt(net, t);
+      $('#wUsdIn').textContent  = '≈ ' + money(usdOf(f, a));
+      $('#wUsdOut').textContent = '≈ ' + money(usdOf(t, net));
+      $('#wRate').textContent   = `1 ${f} ≈ ${fmt(convert(f, t, 1), t)} ${t}`;
+      $('#wFeeLbl').textContent = `${feeNameFor(st)} (${(rate * 100).toFixed(1)}%)`;
+      $('#wFee').textContent    = money(feeUsd) + (cfg.ref ? ` · you earn ${money(feeUsd * REF_LEVELS[0])}` : '');
+      updateCta(a);
+      return { a, f, t, net, feeUsd, rate };
+    }
 
-    $('wGo').addEventListener('click', () => {
+    function updateCta(a) {
+      const btn = $('#wGo');
+      if (!btn) return;
+      const ff = st.mode === 'swap' && isFiat(st.from) && isFiat(st.to);
+      const label = !a || a <= 0 ? 'Enter an amount'
+        : st.mode === 'buy'  ? `Buy ${st.to} with ${st.from}`
+        : st.mode === 'sell' ? `Sell ${st.from} for ${st.to}`
+        : ff ? `Send ${st.from} · Receive ${st.to}`
+        : `Swap ${st.from} → ${st.to}`;
+      btn.textContent = label;
+      btn.disabled = !a || a <= 0 || st.from === st.to;
+    }
+
+    /* ---------- submit ---------- */
+    function submit() {
       const q = quote();
       if (!q) return;
-      const btn = $('wGo');
+      const ff = st.mode === 'swap' && isFiat(q.f) && isFiat(q.t);
+      const rcp = {
+        name: ($('#wRcpName') || {}).value ? $('#wRcpName').value.trim() : '',
+        acct: ($('#wRcpAcct') || {}).value ? $('#wRcpAcct').value.trim() : '',
+        bank: ($('#wRcpBank') || {}).value ? $('#wRcpBank').value.trim() : '',
+      };
+      const dest = ($('#wDest') || {}).value ? $('#wDest').value.trim() : '';
+      if ((ff || st.mode === 'sell') && (!rcp.name || !rcp.acct || !rcp.bank)) {
+        ['#wRcpName', '#wRcpAcct', '#wRcpBank'].forEach(sel => {
+          const el = $(sel);
+          if (el && !el.value.trim()) { el.style.borderColor = '#fc9fdf'; setTimeout(() => el.style.borderColor = '', 1200); }
+        });
+        return;
+      }
+      const btn = $('#wGo');
       btn.disabled = true;
       btn.innerHTML = '<span class="spin"></span>Settling on Stellar…';
+
       setTimeout(() => {
         const swapRef = newRef();
-        const paid = creditReferrals(cfg.ref, q.feeUsd, swapRef, `${q.f}→${q.t}`);
+        const pair = `${q.f}→${q.t}`;
+        const paid = creditReferrals(cfg.ref, q.feeUsd, swapRef, pair);
+
+        /* record for the referral dashboard */
         const swaps = store.read(K_SWAPS, []);
-        swaps.push({ ref: swapRef, from: q.f, to: q.t, amount: q.a, received: q.net,
-                     feeUsd: q.feeUsd, widgetRef: cfg.ref || null, dest: $('wDest').value || '—', ts: Date.now() });
+        swaps.push({ ref: swapRef, mode: st.mode, from: q.f, to: q.t, amount: q.a, received: q.net,
+                     feeUsd: q.feeUsd, widgetRef: cfg.ref || null,
+                     dest: dest || rcp.acct || '—', ts: Date.now() });
         store.write(K_SWAPS, swaps);
 
-        const view = root.querySelector('.swapview');
+        /* record for the admin console escrow queue */
+        pushToAdminQueue({
+          ref: swapRef, t: Date.now(), type: ff ? 'fiat' : st.mode,
+          fromSym: q.f, fromAmt: q.a, toSym: q.t, toAmt: q.net,
+          sender: { name: 'Widget embed' + (cfg.ref ? ' · ' + cfg.ref : ''), acct: dest || 'widget' },
+          recipient: (ff || st.mode === 'sell') ? rcp : { name: 'Self · wallet', acct: dest || '—', bank: '—' },
+          status: 'pending',
+        });
+
+        const title = ff ? 'TRANSFER BOOKED'
+          : st.mode === 'sell' ? 'SELL ORDER BOOKED'
+          : st.mode === 'buy'  ? 'PURCHASE BOOKED' : 'SWAP COMPLETE';
+        const sub = ff
+          ? `Sent <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> → <span class="ref">${rcp.name}</span> at ${rcp.bank} receives <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`
+          : st.mode === 'sell'
+          ? `Sold <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> → <span class="ref">${rcp.name}</span> at ${rcp.bank} receives <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`
+          : st.mode === 'buy'
+          ? `Paid <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> via ${PAY_METHODS[st.payMethod].label} → you receive <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`
+          : `Sent <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> → recipient gets <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`;
+
         view.innerHTML = `
           <div class="done">
             <div class="check">✓</div>
-            <h3>SWAP COMPLETE</h3>
-            <p>Sent <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> → recipient gets
-               <span class="ref">${fmt(q.net, q.t)} ${q.t}</span><br>
-               Reference <span class="ref">${swapRef}</span> · settled in ~4.8s</p>
+            <h3>${title}</h3>
+            <p>${sub}<br>Reference <span class="ref">${swapRef}</span></p>
+            <div class="escrow">Funds are held in the CrossTrade escrow ${isFiat(q.f) ? 'settlement account' : 'wallet'} for compliance screening — released to the destination on approval, refunded if rejected.</div>
             ${paid.length ? `<div class="earn">
               ${paid.map(p => `<div><span>Level ${p.level} referral · ${p.code}</span><b>+${money(p.amount)}</b></div>`).join('')}
             </div>` : ''}
-            <button class="again" id="wAgain" type="button">New swap</button>
+            <button class="again" id="wAgain" type="button">New ${st.mode === 'buy' ? 'purchase' : st.mode === 'sell' ? 'sale' : 'swap'}</button>
           </div>`;
-        $('wAgain').addEventListener('click', () => {
-          /* rebuild the widget fresh */
-          host.innerHTML = '';
-          buildWidget(host, cfg);
-        });
+        $('#wAgain').addEventListener('click', () => renderForm());
       }, 1600);
+    }
+
+    /* ---------- tabs ---------- */
+    root.querySelectorAll('.tabs button').forEach(b => {
+      if (b.dataset.m === st.mode) b.classList.add('on');
+      b.addEventListener('click', () => {
+        st.mode = b.dataset.m;
+        const d = MODE_DEFAULTS[st.mode];
+        if (!allowed(st.mode, 'from').includes(st.from)) st.from = d.from;
+        if (!allowed(st.mode, 'to').includes(st.to))     st.to   = d.to;
+        if (st.from === st.to) { st.from = d.from; st.to = d.to; }
+        root.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+        renderForm();
+      });
     });
 
-    quote();
+    renderForm();
   }
 
   /* ---------- boot: find every embed tag ---------- */
   function boot() {
     /* pattern 1: <script src=".../ct-widget.js" data-...></script> */
-    document.querySelectorAll('script[src*="ct-widget.js"]').forEach(s => {
+    document.querySelectorAll('script[src*="ct-widget.js"][data-ref]').forEach(s => {
       if (s.dataset.ctMounted) return;
       s.dataset.ctMounted = '1';
       const host = document.createElement('div');
@@ -277,6 +436,7 @@
       buildWidget(host, {
         ref:    (s.dataset.ref || '').trim().toUpperCase() || null,
         theme:  (s.dataset.theme || 'dark').toLowerCase(),
+        mode:   (s.dataset.mode || 'swap').toLowerCase(),
         from:   (s.dataset.from || 'USD').toUpperCase(),
         to:     (s.dataset.to || 'NGN').toUpperCase(),
         amount: s.dataset.amount || '500',
@@ -288,12 +448,15 @@
       buildWidget(d, {
         ref:    (d.dataset.ref || '').trim().toUpperCase() || null,
         theme:  (d.dataset.theme || 'dark').toLowerCase(),
+        mode:   (d.dataset.mode || 'swap').toLowerCase(),
         from:   (d.dataset.from || 'USD').toUpperCase(),
         to:     (d.dataset.to || 'NGN').toUpperCase(),
         amount: d.dataset.amount || '500',
       });
     });
   }
+  /* allow host pages to re-scan after dynamically adding embed tags */
+  window.__ctBoot = boot;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
