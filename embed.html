@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embed CrossTrade — Swap Widget & Referral Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050308; --bg2:#0b0714; --fld:#141026; --ink:#f3f0ff; --muted:#9a93b8;
+  --line:rgba(168,111,255,.22); --grad:linear-gradient(135deg,#6a48f2,#a86fff 55%,#fc9fdf);
+  --accent:#a86fff; --green:#2fd47e;
+  --font-d:'Bebas Neue',sans-serif; --font-b:'Inter',sans-serif; --font-m:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(700px 420px at 12% -6%,rgba(106,72,242,.20),transparent 60%),
+             radial-gradient(640px 400px at 92% 8%,rgba(252,159,223,.10),transparent 60%),
+             radial-gradient(760px 520px at 50% 108%,rgba(168,111,255,.12),transparent 60%);}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* nav */
+nav{display:flex;align-items:center;gap:12px;padding:26px 0}
+.logo{width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:21px;color:#fff}
+.wordmark{font-family:var(--font-d);font-size:24px;letter-spacing:3px}
+.wordmark small{display:block;font-family:var(--font-b);font-size:9.5px;letter-spacing:2px;color:var(--muted);font-weight:700;margin-top:-5px}
+nav .sp{flex:1}
+nav a.nl{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;margin-left:22px;transition:color .2s}
+nav a.nl:hover{color:var(--ink)}
+
+/* hero */
+.hero{padding:64px 0 40px;max-width:820px}
+.kicker{display:inline-block;font-size:11px;font-weight:800;letter-spacing:2.5px;color:var(--accent);border:1px solid var(--line);padding:6px 14px;border-radius:99px;margin-bottom:22px}
+h1{font-family:var(--font-d);font-size:clamp(46px,7vw,84px);line-height:.98;letter-spacing:1px}
+h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin-top:20px;color:var(--muted);font-size:16.5px;max-width:640px}
+.hero p b{color:var(--ink)}
+
+/* sections */
+section{padding:56px 0}
+h2{font-family:var(--font-d);font-size:clamp(30px,4vw,44px);letter-spacing:1.2px;margin-bottom:8px}
+.sub{color:var(--muted);font-size:14.5px;max-width:620px;margin-bottom:30px}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:22px}
+.step .n{font-family:var(--font-d);font-size:30px;color:var(--accent)}
+.step h3{font-size:15px;margin:6px 0 6px}
+.step p{font-size:12.5px;color:var(--muted)}
+
+/* code blocks */
+.codecard{background:var(--bg2);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:18px}
+.codecard .bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.codecard .bar .t{font-size:12.5px;font-weight:700}
+.codecard .bar .d{font-size:11px;color:var(--muted)}
+.copy{margin-left:auto;background:none;border:1px solid var(--line);color:var(--accent);border-radius:9px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font-b)}
+.copy:hover{border-color:var(--accent)}
+.copy.ok{color:var(--green);border-color:var(--green)}
+.codecard pre{padding:16px 18px;font-family:var(--font-m);font-size:12px;line-height:1.75;color:#cfc6f5;overflow-x:auto;white-space:pre}
+.codecard pre .k{color:#fc9fdf}.codecard pre .s{color:#8fe3b8}.codecard pre .c{color:#6d6690}
+
+/* previews */
+.previews{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.pv{border:1px solid var(--line);border-radius:18px;padding:34px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.pv.dark{background:#0e0a1c}
+.pv.light{background:#eef;padding:none}
+.pv.light{background:#e9e6f7}
+.pv .cap{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.pv.light .cap{color:#6d6690}
+
+/* referral chain */
+.chain{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:26px}
+.lvl{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:24px;position:relative}
+.lvl .pct{font-family:var(--font-d);font-size:52px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+.lvl h3{font-size:14px;margin:8px 0 6px}
+.lvl p{font-size:12.5px;color:var(--muted)}
+.lvl .tag{position:absolute;top:16px;right:16px;font-size:9.5px;font-weight:800;letter-spacing:1.5px;color:var(--accent);border:1px solid var(--line);padding:3px 9px;border-radius:99px}
+.math{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:24px 26px}
+.math h3{font-size:14px;margin-bottom:14px;letter-spacing:.5px}
+.math table{width:100%;border-collapse:collapse;font-size:13px}
+.math th{text-align:left;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+.math td{padding:9px 10px;border-bottom:1px solid rgba(168,111,255,.08)}
+.math td.m{font-family:var(--font-m);color:var(--green);text-align:right}
+.math tr:last-child td{border-bottom:none}
+
+/* dashboard */
+.dash{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:28px}
+.genrow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.genrow input{flex:1;min-width:200px;background:var(--fld);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--ink);font-size:13px;outline:none;font-family:var(--font-b)}
+.genrow input::placeholder{color:var(--muted)}
+.btn{background:var(--grad);color:#fff;border:none;border-radius:11px;padding:12px 22px;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:var(--font-b);transition:opacity .2s}
+.btn:hover{opacity:.9}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat{background:var(--fld);border:1px solid var(--line);border-radius:13px;padding:16px}
+.stat .v{font-family:var(--font-m);font-size:21px;font-weight:600;color:var(--ink)}
+.stat .v.g{color:var(--green)}
+.stat .l{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.mycodes{margin-bottom:24px}
+.mycodes .chip{display:inline-flex;align-items:center;gap:10px;background:var(--fld);border:1px solid var(--line);border-radius:11px;padding:9px 14px;margin:0 8px 8px 0;font-family:var(--font-m);font-size:13px}
+.mycodes .chip .par{font-size:10.5px;color:var(--muted);font-family:var(--font-b)}
+.mycodes .chip .cp{background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700;font-family:var(--font-b)}
+table.ledger{width:100%;border-collapse:collapse;font-size:12.5px}
+table.ledger th{text-align:left;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+table.ledger td{padding:9px 10px;border-bottom:1px solid rgba(168,111,255,.08);font-family:var(--font-m);font-size:12px}
+table.ledger td.a{color:var(--green)}
+.empty{color:var(--muted);font-size:12.5px;padding:16px 10px}
+.lbl{font-size:10.5px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin:22px 0 10px}
+
+footer{border-top:1px solid var(--line);padding:34px 0 44px;margin-top:40px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer a{color:var(--accent);text-decoration:none}
+
+@media(max-width:860px){.steps,.chain,.previews{grid-template-columns:1fr}.statgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <div class="logo">C</div>
+    <div class="wordmark">CROSSTRADE<small>EMBED &amp; EARN</small></div>
+    <div class="sp"></div>
+    <a class="nl" href="index.html">Exchange</a>
+    <a class="nl" href="#getcode">Get a code</a>
+    <a class="nl" href="#dashboard">Dashboard</a>
+  </nav>
+
+  <div class="hero">
+    <div class="kicker">SWAP WIDGET · 3-LEVEL REFERRALS</div>
+    <h1>PUT CROSSTRADE<br>ON <span>YOUR SITE.</span></h1>
+    <p>One line of code adds a fully working cross-border swap card to any website.
+       Every swap through your embed pays you <b>30% of the CrossTrade fee</b> — and the partners
+       above you in the chain earn <b>20%</b> and <b>10%</b>. No SDK, no backend, no API key.</p>
+  </div>
+
+  <!-- ================= STEPS ================= -->
+  <section id="how">
+    <h2>LIVE IN THREE STEPS</h2>
+    <p class="sub">Copy the snippet, paste it anywhere in your HTML, done. The widget inherits nothing from your page and conflicts with nothing — it runs fully isolated.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Get your referral code</h3><p>Generate a free code in the dashboard below. Optionally enter the code of whoever referred you — they'll earn on your traffic too.</p></div>
+      <div class="step"><div class="n">02</div><h3>Paste the shortcode</h3><p>Drop the script tag into any page, blog, or CMS. Set your code, theme, and default currency pair via data attributes.</p></div>
+      <div class="step"><div class="n">03</div><h3>Earn on every swap</h3><p>Your visitors swap; you collect 30% of every fee automatically. Track earnings live in the referral dashboard.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= SHORTCODES ================= -->
+  <section id="shortcode">
+    <h2>THE SHORTCODE</h2>
+    <p class="sub">Three ready-made variants. Only <b>data-ref</b> is required for referral tracking — everything else is optional.</p>
+
+    <div class="codecard">
+      <div class="bar"><span class="t">Basic embed</span><span class="d">dark theme · USD → NGN default</span>
+        <button class="copy" data-copy="basic">Copy</button></div>
+      <pre id="cc-basic"><span class="c">&lt;!-- CrossTrade swap widget --&gt;</span>
+&lt;script src=<span class="s">"https://crosstrade.app/ct-widget.js"</span>
+        <span class="k">data-ref</span>=<span class="s">"<span class="u-ref">YOUR-CODE</span>"</span>&gt;&lt;/script&gt;</pre>
+    </div>
+
+    <div class="codecard">
+      <div class="bar"><span class="t">Custom pair + amount</span><span class="d">light theme · ZAR → USDC · 5,000 preset</span>
+        <button class="copy" data-copy="custom">Copy</button></div>
+      <pre id="cc-custom">&lt;script src=<span class="s">"https://crosstrade.app/ct-widget.js"</span>
+        <span class="k">data-ref</span>=<span class="s">"<span class="u-ref">YOUR-CODE</span>"</span>
+        <span class="k">data-theme</span>=<span class="s">"light"</span>
+        <span class="k">data-from</span>=<span class="s">"ZAR"</span> <span class="k">data-to</span>=<span class="s">"USDC"</span>
+        <span class="k">data-amount</span>=<span class="s">"5000"</span>&gt;&lt;/script&gt;</pre>
+    </div>
+
+    <div class="codecard">
+      <div class="bar"><span class="t">CMS / div variant</span><span class="d">for page builders that strip script tags</span>
+        <button class="copy" data-copy="div">Copy</button></div>
+      <pre id="cc-div">&lt;div class=<span class="s">"ct-swap-widget"</span> <span class="k">data-ref</span>=<span class="s">"<span class="u-ref">YOUR-CODE</span>"</span> <span class="k">data-theme</span>=<span class="s">"dark"</span>&gt;&lt;/div&gt;
+&lt;script src=<span class="s">"https://crosstrade.app/ct-widget.js"</span>&gt;&lt;/script&gt;</pre>
+    </div>
+  </section>
+
+  <!-- ================= LIVE PREVIEW ================= -->
+  <section id="preview">
+    <h2>WHAT YOUR VISITORS SEE</h2>
+    <p class="sub">These are the live widgets — try one. Both are fully functional and settle on the Stellar simulation rail.</p>
+    <div class="previews">
+      <div class="pv dark">
+        <div class="cap">data-theme="dark"</div>
+        <script src="ct-widget.js" data-ref="DEMO-DARK" data-theme="dark" data-from="USD" data-to="NGN" data-amount="500"></script>
+      </div>
+      <div class="pv light">
+        <div class="cap">data-theme="light"</div>
+        <script src="ct-widget.js" data-ref="DEMO-LIGHT" data-theme="light" data-from="ZAR" data-to="GHS" data-amount="5000"></script>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REFERRAL LEVELS ================= -->
+  <section id="levels">
+    <h2>THREE LEVELS OF REFERRAL INCOME</h2>
+    <p class="sub">Every widget embed carries a referral code. Codes can be chained — when someone you referred starts embedding, you earn on their traffic too, three levels deep.</p>
+    <div class="chain">
+      <div class="lvl"><span class="tag">LEVEL 1</span><div class="pct">30%</div><h3>Your embeds</h3><p>You place the widget with your code. Every swap through it pays you 30% of the 0.8% CrossTrade fee.</p></div>
+      <div class="lvl"><span class="tag">LEVEL 2</span><div class="pct">20%</div><h3>Partners you referred</h3><p>Someone registers with your code as their referrer. Every swap through <i>their</i> embeds pays you 20% of the fee.</p></div>
+      <div class="lvl"><span class="tag">LEVEL 3</span><div class="pct">10%</div><h3>Their partners</h3><p>One more level down: swaps through your partners' partners' embeds still pay you 10% of the fee.</p></div>
+    </div>
+    <div class="math">
+      <h3>Worked example — a $1,000 swap</h3>
+      <table>
+        <thead><tr><th>Who</th><th>Relationship</th><th>Share of fee</th><th style="text-align:right">Earns</th></tr></thead>
+        <tbody>
+          <tr><td>CrossTrade fee (0.8%)</td><td>—</td><td>—</td><td class="m">$8.00</td></tr>
+          <tr><td>Site owner</td><td>Level 1 · their widget</td><td>30%</td><td class="m">$2.40</td></tr>
+          <tr><td>Their referrer</td><td>Level 2 · upline</td><td>20%</td><td class="m">$1.60</td></tr>
+          <tr><td>Next upline</td><td>Level 3 · top of chain</td><td>10%</td><td class="m">$0.80</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD ================= -->
+  <section id="dashboard">
+    <h2 id="getcode">REFERRAL DASHBOARD</h2>
+    <p class="sub">Generate your code, build your chain, and watch earnings arrive as visitors swap through your embeds. Codes and earnings are stored in this browser.</p>
+    <div class="dash">
+      <div class="genrow">
+        <input id="newCode" placeholder="Pick your code (e.g. MY-BLOG)" maxlength="18">
+        <input id="parentCode" placeholder="Referrer's code (optional)">
+        <button class="btn" id="genBtn">Generate</button>
+      </div>
+
+      <div class="mycodes" id="myCodes"></div>
+
+      <div class="statgrid" id="statGrid">
+        <div class="stat"><div class="v g" id="stTotal">$0.00</div><div class="l">Total earned</div></div>
+        <div class="stat"><div class="v" id="stL1">$0.00</div><div class="l">Level 1 · 30%</div></div>
+        <div class="stat"><div class="v" id="stL2">$0.00</div><div class="l">Level 2 · 20%</div></div>
+        <div class="stat"><div class="v" id="stL3">$0.00</div><div class="l">Level 3 · 10%</div></div>
+      </div>
+
+      <div class="lbl">Earnings ledger</div>
+      <div style="overflow-x:auto">
+      <table class="ledger">
+        <thead><tr><th>When</th><th>Code</th><th>Level</th><th>Pair</th><th>Swap ref</th><th style="text-align:right">Earned</th></tr></thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="ledgerEmpty">No referral earnings yet — embed a widget and make a swap above to see the ledger fill in.</div>
+
+      <div class="lbl">Recent widget swaps (all embeds in this browser)</div>
+      <div style="overflow-x:auto">
+      <table class="ledger">
+        <thead><tr><th>When</th><th>Ref</th><th>From</th><th>To</th><th>Widget code</th><th style="text-align:right">Fee (USD)</th></tr></thead>
+        <tbody id="swapsBody"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="swapsEmpty">No widget swaps recorded yet.</div>
+
+      <div class="lbl">Snippet with your code</div>
+      <div class="codecard" style="margin-bottom:0">
+        <div class="bar"><span class="t">Your personal shortcode</span><span class="d">updates with the code field above</span>
+          <button class="copy" data-copy="mine">Copy</button></div>
+        <pre id="cc-mine"></pre>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© 2026 CrossTrade · Simulated environment — no real funds move. Widget data is stored in the visitor's browser.</div>
+    <div><a href="index.html">Open the full exchange →</a></div>
+  </footer>
+</div>
+
+<script>
+/* ---------- storage helpers (shared keys with ct-widget.js) ---------- */
+const K_CODES='ct-ref-codes', K_EARN='ct-ref-earnings', K_SWAPS='ct-widget-swaps';
+const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch(e){return f}};
+const write=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const money=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const when=ts=>{const s=(Date.now()-ts)/1e3;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'};
+
+/* ---------- generate codes ---------- */
+const genBtn=document.getElementById('genBtn'), newCode=document.getElementById('newCode'), parentCode=document.getElementById('parentCode');
+genBtn.addEventListener('click',()=>{
+  const code=(newCode.value||'').trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');
+  if(!code){newCode.focus();newCode.style.borderColor='#fc9fdf';setTimeout(()=>newCode.style.borderColor='',900);return}
+  const parent=(parentCode.value||'').trim().toUpperCase();
+  const codes=read(K_CODES,{});
+  if(codes[code]){renderDash();return}
+  codes[code]={code,parent:(parent&&parent!==code&&codes[parent])?parent:(parent&&parent!==code?parent:null),created:Date.now()};
+  write(K_CODES,codes);
+  newCode.value='';parentCode.value='';
+  renderDash();
+});
+
+/* ---------- copy buttons ---------- */
+function snippetFor(code){return `<script src="https://crosstrade.app/ct-widget.js"\n        data-ref="${code||'YOUR-CODE'}"><\/script>`}
+document.querySelectorAll('.copy').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    let txt;
+    if(btn.dataset.copy==='basic')  txt=snippetFor(currentCode());
+    if(btn.dataset.copy==='custom') txt=`<script src="https://crosstrade.app/ct-widget.js"\n        data-ref="${currentCode()}"\n        data-theme="light"\n        data-from="ZAR" data-to="USDC"\n        data-amount="5000"><\/script>`;
+    if(btn.dataset.copy==='div')    txt=`<div class="ct-swap-widget" data-ref="${currentCode()}" data-theme="dark"></div>\n<script src="https://crosstrade.app/ct-widget.js"><\/script>`;
+    if(btn.dataset.copy==='mine')   txt=snippetFor(currentCode());
+    navigator.clipboard.writeText(txt).then(()=>{
+      btn.textContent='Copied ✓';btn.classList.add('ok');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok')},1600);
+    });
+  });
+});
+function currentCode(){
+  const codes=read(K_CODES,{});
+  const typed=(newCode.value||'').trim().toUpperCase();
+  return typed||Object.keys(codes)[0]||'YOUR-CODE';
+}
+
+/* ---------- dashboard render ---------- */
+function renderDash(){
+  const codes=read(K_CODES,{}), earn=read(K_EARN,[]), swaps=read(K_SWAPS,[]);
+
+  /* my codes */
+  const mc=document.getElementById('myCodes');
+  const keys=Object.keys(codes);
+  mc.innerHTML=keys.length?keys.map(c=>`<span class="chip">${c}${codes[c].parent?`<span class="par">← referred by ${codes[c].parent}</span>`:''}<button class="cp" data-c="${c}">copy code</button></span>`).join(''):'<span style="color:var(--muted);font-size:12.5px">No codes yet — generate one above.</span>';
+  mc.querySelectorAll('.cp').forEach(b=>b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.c);b.textContent='copied ✓';setTimeout(()=>b.textContent='copy code',1400)}));
+
+  /* stats */
+  const by=l=>earn.filter(e=>e.level===l).reduce((s,e)=>s+e.amount,0);
+  document.getElementById('stTotal').textContent=money(earn.reduce((s,e)=>s+e.amount,0));
+  document.getElementById('stL1').textContent=money(by(1));
+  document.getElementById('stL2').textContent=money(by(2));
+  document.getElementById('stL3').textContent=money(by(3));
+
+  /* ledger */
+  const lb=document.getElementById('ledgerBody'), le=document.getElementById('ledgerEmpty');
+  const rows=[...earn].sort((a,b)=>b.ts-a.ts).slice(0,25);
+  lb.innerHTML=rows.map(e=>`<tr><td>${when(e.ts)}</td><td>${e.code}</td><td>L${e.level}</td><td>${e.pair}</td><td>${e.swapRef}</td><td class="a" style="text-align:right">+${money(e.amount)}</td></tr>`).join('');
+  le.style.display=rows.length?'none':'block';
+
+  /* swaps */
+  const sb=document.getElementById('swapsBody'), se=document.getElementById('swapsEmpty');
+  const sw=[...swaps].sort((a,b)=>b.ts-a.ts).slice(0,25);
+  sb.innerHTML=sw.map(s=>`<tr><td>${when(s.ts)}</td><td>${s.ref}</td><td>${s.amount} ${s.from}</td><td>${s.to}</td><td>${s.widgetRef||'—'}</td><td style="text-align:right">${money(s.feeUsd)}</td></tr>`).join('');
+  se.style.display=sw.length?'none':'block';
+
+  /* personal snippet */
+  document.getElementById('cc-mine').textContent=snippetFor(currentCode());
+}
+
+/* refresh the dashboard when a widget swap happens anywhere on this page */
+let lastEarn=read(K_EARN,[]).length, lastSwaps=read(K_SWAPS,[]).length;
+setInterval(()=>{
+  const e=read(K_EARN,[]).length, s=read(K_SWAPS,[]).length;
+  if(e!==lastEarn||s!==lastSwaps){lastEarn=e;lastSwaps=s;renderDash()}
+},1200);
+
+renderDash();
+</script>
+</body>
+</html>
