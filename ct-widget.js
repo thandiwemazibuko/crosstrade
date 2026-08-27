@@ -59,6 +59,47 @@
   };
   const REF_LEVELS = [0.30, 0.20, 0.10];       /* L1 / L2 / L3 share of the fee */
 
+  /* ---------- platform settlement accounts (mirror the main app) ---------- */
+  const ADMIN_ACCOUNTS = {
+    USD:{bank:'Mercury Bank · CrossTrade Settlement LLC', name:'CrossTrade Escrow — USD', acct:'US12 3456 7890 1234 5678 90', rail:'Wire / ACH'},
+    EUR:{bank:'CrossTrade Europe BV', name:'CrossTrade Escrow — EUR', acct:'DE89 3704 0044 0532 0130 00', rail:'SEPA'},
+    GBP:{bank:'CrossTrade UK Ltd', name:'CrossTrade Escrow — GBP', acct:'GB29 NWBK 6016 1331 9268 19', rail:'Faster Payments'},
+    NGN:{bank:'CrossTrade NG · Kuda Microfinance', name:'CrossTrade Escrow — NGN', acct:'2001 3344 55', rail:'NIP transfer'},
+    ZAR:{bank:'CrossTrade ZA · Standard Bank', name:'CrossTrade Escrow — ZAR', acct:'ZA45 0800 1234 5678 9012 34', rail:'EFT / PayShap'},
+    KES:{bank:'CrossTrade KE · Equity Bank', name:'CrossTrade Escrow — KES', acct:'0470 1234 5678', rail:'PesaLink / M-Pesa'},
+    GHS:{bank:'CrossTrade GH · Stanbic Ghana', name:'CrossTrade Escrow — GHS', acct:'9040 0055 6677', rail:'GhIPSS instant'},
+    MWK:{bank:'CrossTrade MW · National Bank of Malawi', name:'CrossTrade Escrow — MWK', acct:'1002 3344 5566', rail:'EFT'},
+    MZN:{bank:'CrossTrade MZ · BCI Moçambique', name:'CrossTrade Escrow — MZN', acct:'1188 4455 6677 001', rail:'SIMO / EFT'},
+    BRL:{bank:'CrossTrade BR · Banco Inter', name:'CrossTrade Escrow — BRL', acct:'BR97 0036 0305 0001 0000 9795 493P 1', rail:'Pix'},
+    PHP:{bank:'CrossTrade PH · BDO Unibank', name:'CrossTrade Escrow — PHP', acct:'0011 2233 4455', rail:'InstaPay'},
+  };
+  /* escrow wallets for crypto-side deposits */
+  const ADMIN_WALLETS = {
+    XLM:{name:'CrossTrade Escrow — XLM', addr:'GCCTRXLMESCROW7QF4K2HOLDPENDINGSCREEN7WALLETXXXX'},
+    USDC:{name:'CrossTrade Escrow — USDC', addr:'GCCTRUSDCESCROW9K3M7HOLDPENDINGSCREEN9WALLETXXXX'},
+    AQUA:{name:'CrossTrade Escrow — AQUA', addr:'GCCTRAQUAESCROW4P8N2HOLDPENDINGSCREEN4WALLETXXXX'},
+    yXLM:{name:'CrossTrade Escrow — yXLM', addr:'GCCTRYXLMSCROW6T2W9HOLDPENDINGSCREEN6WALLETXXXX'},
+    BTC:{name:'CrossTrade Escrow — BTC', addr:'bc1qctradeescrow7k9holdpendingscreeningwallet0x'},
+    ETH:{name:'CrossTrade Escrow — ETH', addr:'0xC7055TradeEscrow9K3HoldPendingScreeningWallet42'},
+    USDT:{name:'CrossTrade Escrow — USDT', addr:'0xC7055TradeEscrowUSDT7HoldPendingScreeningWlt88'},
+    XRP:{name:'CrossTrade Escrow — XRP', addr:'rCrossTradeEscrowXRP9HoldPendingScreeningWltXx'},
+    BNB:{name:'CrossTrade Escrow — BNB', addr:'0xC7055TradeEscrowBNB4HoldPendingScreeningWlt21'},
+  };
+  /* admin console overrides (accounts / wallets / fees) */
+  try {
+    const ovAcc = store.read('ct-admin-accounts', null);
+    if (ovAcc) Object.keys(ovAcc).forEach(k => { if (ADMIN_ACCOUNTS[k]) ADMIN_ACCOUNTS[k] = {...ADMIN_ACCOUNTS[k], ...ovAcc[k]}; });
+    const ovWal = store.read('ct-admin-wallets', null);
+    if (ovWal) Object.keys(ovWal).forEach(k => { if (ADMIN_WALLETS[k]) ADMIN_WALLETS[k] = {...ADMIN_WALLETS[k], ...ovWal[k]}; });
+    const ovFee = store.read('ct-admin-fees', null);
+    if (ovFee) {
+      if (ovFee.corridor != null) FEES.corridor = ovFee.corridor / 100;
+      if (ovFee.sell != null) FEES.sell = ovFee.sell / 100;
+      if (ovFee.pool != null) FEES.pool = ovFee.pool / 100;
+      if (ovFee.methods) Object.keys(ovFee.methods).forEach(k => { if (PAY_METHODS[k]) PAY_METHODS[k].fee = ovFee.methods[k] / 100; });
+    }
+  } catch (e) {}
+
   /* ---------- referral storage (shared with the embed dashboard) ---------- */
   const store = {
     read(key, fallback) {
@@ -178,6 +219,25 @@
     .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
             border-radius:50%; animation:ctw-rot .7s linear infinite; vertical-align:-2px; margin-right:7px; }
     @keyframes ctw-rot { to { transform:rotate(360deg); } }
+    /* rate-lock countdown chip */
+    .lock { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:11px;
+            background:var(--fld); border:1px solid var(--line); border-radius:10px; padding:8px 12px;
+            font-size:11px; color:var(--muted); }
+    .lock b { font-family:'JetBrains Mono', monospace; font-weight:600; color:var(--ink); font-size:12.5px; }
+    .lock.live b { color:#2fd47e; }
+    .lock.warn { border-color:rgba(252,159,223,.55); }
+    .lock.warn b { color:#fc9fdf; }
+    .lock.expired b { color:#ff7b7b; }
+    .lock .re { background:none; border:1px solid var(--line); color:#a86fff; border-radius:8px; padding:3px 10px;
+                font-size:10.5px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; }
+    /* settlement / deposit panel on success */
+    .dep { margin:13px 0 0; background:var(--fld); border:1px solid var(--line); border-radius:11px; padding:12px 13px; text-align:left; }
+    .dep .dh { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
+    .dep .dt { font-size:9.5px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:#a86fff; }
+    .dep .cpb { background:none; border:1px solid var(--line); color:#a86fff; border-radius:7px; padding:2px 9px;
+                font-size:10px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; }
+    .dep .dr { display:flex; justify-content:space-between; gap:14px; font-size:11px; color:var(--muted); padding:3px 0; }
+    .dep .dr b { color:var(--ink); font-family:'JetBrains Mono', monospace; font-weight:600; text-align:right; word-break:break-all; }
     @media (max-width:440px){ .ctw{ max-width:100%; } }
   `;
 
@@ -241,6 +301,34 @@
     const $ = sel => shadow.querySelector(sel);
     const view = root.querySelector('.swapview');
 
+    /* ---------- 60-minute rate lock countdown ---------- */
+    const LOCK_MS = 60 * 60 * 1000;
+    let lockExp = Date.now() + LOCK_MS, lockTimer = null, lockBox = null;
+    const lockLeft = () => Math.max(0, lockExp - Date.now());
+    function tickLock() {
+      if (!lockBox || !lockBox.isConnected) { clearInterval(lockTimer); lockTimer = null; return; }
+      const ms = lockLeft();
+      const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+      const b = lockBox.querySelector('b');
+      if (b) b.textContent = ms ? `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : 'expired';
+      lockBox.classList.toggle('warn', ms > 0 && ms < 5 * 60000);
+      lockBox.classList.toggle('expired', !ms);
+      const re = lockBox.querySelector('.re');
+      if (re) re.style.display = ms ? 'none' : '';
+      const lbl = lockBox.querySelector('span');
+      if (lbl) lbl.textContent = ms ? 'Rate locked — trade expires in' : 'Rate lock expired';
+    }
+    function mountLock() {
+      lockBox = $('#wLock');
+      if (!lockBox) return;
+      if (!lockTimer) lockTimer = setInterval(tickLock, 1000);
+      tickLock();
+    }
+    function refreshLock() {
+      lockExp = Date.now() + LOCK_MS;
+      if (lockBox && lockBox.isConnected) tickLock();
+    }
+
     const opts = (list, sel) => list.map(s =>
       `<option value="${s}" ${s === sel ? 'selected' : ''}>${ASSETS[s].flag ? ASSETS[s].flag + ' ' : ''}${s}</option>`).join('');
 
@@ -289,6 +377,7 @@
           <div><span id="wFeeLbl">Fee</span><b id="wFee"></b></div>
           <div><span>Settlement</span><b>~5 sec · Stellar</b></div>
         </div>
+        <div class="lock live" id="wLock"><span>Rate locked — trade expires in</span><b>60:00</b><button class="re" type="button" style="display:none">Refresh rate</button></div>
         ${st.mode !== 'sell' && !ff ? '<div class="dest"><input id="wDest" type="text" placeholder="Recipient wallet address or bank account"></div>' : ''}
         <button class="go" id="wGo" type="button"></button>
       `;
@@ -299,6 +388,9 @@
       const pay = $('#wPay'); if (pay) pay.addEventListener('change', e => { st.payMethod = e.target.value; quote(); });
       const flip = $('#wFlip'); if (flip) flip.addEventListener('click', () => { const f = st.from; st.from = st.to; st.to = f; renderForm(); });
       $('#wGo').addEventListener('click', submit);
+      const reBtn = $('#wLock .re');
+      if (reBtn) reBtn.addEventListener('click', refreshLock);
+      mountLock();
       quote();
     }
 
@@ -392,18 +484,50 @@
           ? `Paid <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> via ${PAY_METHODS[st.payMethod].label} → you receive <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`
           : `Sent <span class="ref">${fmt(q.a, q.f)} ${q.f}</span> → recipient gets <span class="ref">${fmt(q.net, q.t)} ${q.t}</span>`;
 
+        /* deposit instructions: settlement account (fiat in) or escrow wallet (crypto in) */
+        const acc = isFiat(q.f) ? ADMIN_ACCOUNTS[q.f] : null;
+        const wal = !isFiat(q.f) ? ADMIN_WALLETS[q.f] : null;
+        const depPanel = acc ? `
+          <div class="dep">
+            <div class="dh"><span class="dt">Deposit to — CrossTrade settlement account</span><button class="cpb" id="wCopyAcct" type="button">Copy account no.</button></div>
+            <div class="dr"><span>Bank</span><b>${acc.bank}</b></div>
+            <div class="dr"><span>Account name</span><b>${acc.name}</b></div>
+            <div class="dr"><span>Account number</span><b>${acc.acct}</b></div>
+            <div class="dr"><span>Pay via</span><b>${acc.rail}</b></div>
+            <div class="dr"><span>Reference</span><b style="color:#a86fff">${swapRef}</b></div>
+          </div>`
+        : wal ? `
+          <div class="dep">
+            <div class="dh"><span class="dt">Send to — CrossTrade escrow wallet</span><button class="cpb" id="wCopyAcct" type="button">Copy address</button></div>
+            <div class="dr"><span>Wallet</span><b>${wal.name}</b></div>
+            <div class="dr"><span>Address</span><b style="font-size:9.5px">${wal.addr}</b></div>
+            <div class="dr"><span>Memo / reference</span><b style="color:#a86fff">${swapRef}</b></div>
+          </div>` : '';
+
         view.innerHTML = `
           <div class="done">
             <div class="check">✓</div>
             <h3>${title}</h3>
             <p>${sub}<br>Reference <span class="ref">${swapRef}</span></p>
+            <div class="lock live" id="wLock"><span>Rate locked — trade expires in</span><b>60:00</b><button class="re" type="button" style="display:none">Refresh rate</button></div>
+            ${depPanel}
             <div class="escrow">Funds are held in the CrossTrade escrow ${isFiat(q.f) ? 'settlement account' : 'wallet'} for compliance screening — released to the destination on approval, refunded if rejected.</div>
             ${paid.length ? `<div class="earn">
               ${paid.map(p => `<div><span>Level ${p.level} referral · ${p.code}</span><b>+${money(p.amount)}</b></div>`).join('')}
             </div>` : ''}
             <button class="again" id="wAgain" type="button">New ${st.mode === 'buy' ? 'purchase' : st.mode === 'sell' ? 'sale' : 'swap'}</button>
           </div>`;
-        $('#wAgain').addEventListener('click', () => renderForm());
+        const copyBtn = $('#wCopyAcct');
+        if (copyBtn && acc) copyBtn.addEventListener('click', () => {
+          navigator.clipboard && navigator.clipboard.writeText(acc.acct).then(() => { copyBtn.textContent = 'Copied ✓'; setTimeout(() => copyBtn.textContent = 'Copy account no.', 1500); });
+        });
+        if (copyBtn && wal) copyBtn.addEventListener('click', () => {
+          navigator.clipboard && navigator.clipboard.writeText(wal.addr).then(() => { copyBtn.textContent = 'Copied ✓'; setTimeout(() => copyBtn.textContent = 'Copy address', 1500); });
+        });
+        const reBtn2 = $('#wLock .re');
+        if (reBtn2) reBtn2.addEventListener('click', refreshLock);
+        mountLock();
+        $('#wAgain').addEventListener('click', () => { refreshLock(); renderForm(); });
       }, 1600);
     }
 

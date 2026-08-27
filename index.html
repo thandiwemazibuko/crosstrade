@@ -290,6 +290,17 @@ section{position:relative;z-index:2}
 .quote-meta .qm-row{display:flex;justify-content:space-between;padding:4px 0}
 .quote-meta .qm-row span:last-child{font-family:var(--font-mono);color:var(--text)}
 .quote-meta .route{color:var(--accent)}
+.rate-lock{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 10px 0;
+  padding:10px 14px;border-radius:12px;font-size:12px;color:var(--muted);
+  background:rgba(168,111,255,.07);border:1px solid var(--border);
+}
+.rate-lock b{font-family:var(--font-mono);font-weight:600;color:var(--ok);font-size:14px}
+.rate-lock.warn b{color:#fc9fdf}
+.rate-lock.warn{border-color:rgba(252,159,223,.45)}
+.rate-lock.expired b{color:var(--err)}
+.rate-lock .rl-re{display:none;background:none;border:1px solid var(--border);color:var(--accent);border-radius:8px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-body)}
+.rate-lock.expired .rl-re{display:inline-block}
 .swap-submit{
   width:100%;margin-top:12px;padding:18px;border-radius:16px;
   background:var(--grad);color:#fff;font-size:16px;font-weight:700;letter-spacing:.02em;
@@ -677,6 +688,10 @@ footer{border-top:1px solid var(--border);padding:70px 0 40px;position:relative;
           <div class="qm-row"><span>Minimum received</span><span id="qmMin">—</span></div>
           <div class="qm-row"><span>Route</span><span class="route" id="qmRoute">—</span></div>
         </div>
+        <div class="rate-lock" id="rateLock">
+          <span>Rate locked — trade expires in</span><b id="rlTime">60:00</b>
+          <button class="rl-re" id="rlRefresh" type="button">Refresh rate</button>
+        </div>
 
         <button class="swap-submit" id="submitBtn" disabled>Connect wallet to trade</button>
       </div>
@@ -890,6 +905,10 @@ footer{border-top:1px solid var(--border);padding:70px 0 40px;position:relative;
       <h3 id="succTitle">Swap submitted</h3>
       <p class="s-sub" id="succSub"></p>
       <div class="hash" id="succHash"></div>
+      <div class="rate-lock" id="succLock" style="margin:14px 0 0">
+        <span>Rate locked — trade expires in</span><b id="slTime">60:00</b>
+        <button class="rl-re" id="slRefresh" type="button">Refresh rate</button>
+      </div>
       <button class="btn-primary" style="margin-top:22px" data-close>Done</button>
     </div>
   </div>
@@ -1221,6 +1240,26 @@ function syncTokenUI(){
   $('#balFrom').textContent = state.wallet ? `Balance: ${fmtAmt(bal, state.from)} ${state.from}` : 'Balance: —';
 }
 
+/* ---------- 60-MINUTE RATE LOCK ---------- */
+const LOCK_MS = 60 * 60 * 1000;
+let lockExp = Date.now() + LOCK_MS;
+function renderLockInto(boxId, timeId){
+  const box = document.getElementById(boxId), t = document.getElementById(timeId);
+  if (!box || !t) return;
+  const ms = Math.max(0, lockExp - Date.now());
+  const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+  t.textContent = ms ? `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : 'expired';
+  box.classList.toggle('warn', ms > 0 && ms < 5 * 60000);
+  box.classList.toggle('expired', !ms);
+  box.querySelector('span').textContent = ms ? 'Rate locked — trade expires in' : 'Rate lock expired';
+}
+function tickLocks(){ renderLockInto('rateLock', 'rlTime'); renderLockInto('succLock', 'slTime'); }
+function refreshLock(){ lockExp = Date.now() + LOCK_MS; tickLocks(); quote(); }
+$('#rlRefresh').addEventListener('click', refreshLock);
+$('#slRefresh').addEventListener('click', refreshLock);
+setInterval(tickLocks, 1000);
+tickLocks();
+
 /* ---------- QUOTE ENGINE ---------- */
 function getRate(from, to){
   // USD value ratio via Stellar DEX path
@@ -1231,6 +1270,7 @@ function quote(){
   const amt = parseFloat(raw);
   const out = $('#amountOut');
   const meta = $('#quoteMeta');
+  if (lockExp - Date.now() <= 0 && raw) refreshLock();   /* auto re-lock a fresh rate when expired */
   if (!raw || !isFinite(amt) || amt <= 0){
     out.value = ''; meta.style.display = 'none';
     $('#usdIn').textContent = '≈ $0.00'; $('#usdOut').textContent = '≈ $0.00';
